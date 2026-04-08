@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ruixen — Data Flow</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #09090b;
+      --surface: #111113;
+      --border: rgba(255,255,255,0.06);
+      --border-hover: rgba(255,255,255,0.12);
+      --text-primary: #fafafa;
+      --text-secondary: #71717a;
+      --text-muted: #3f3f46;
+      --accent-sky: #38bdf8;
+      --accent-emerald: #34d399;
+      --accent-amber: #fbbf24;
+      --accent-violet: #a78bfa;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      font-family: 'Geist', system-ui, sans-serif;
+      color: var(--text-primary);
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 80px 24px 100px;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    /* Ambient background glow */
+    body::before {
+      content: '';
+      position: fixed;
+      top: -20%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 800px;
+      height: 500px;
+      background: radial-gradient(ellipse at center, rgba(56,189,248,0.04) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Grain overlay */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 1;
+      opacity: 0.4;
+    }
+
+    .page-content {
+      position: relative;
+      z-index: 2;
+      width: 100%;
+      max-width: 720px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* ── Header ── */
+    .header {
+      text-align: left;
+      width: 100%;
+      margin-bottom: 64px;
+      padding-left: 2px;
+    }
+
+    .header-eyebrow {
+      font-family: 'Geist Mono', monospace;
+      font-size: 0.65rem;
+      font-weight: 500;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--accent-sky);
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .header-eyebrow::before {
+      content: '';
+      display: inline-block;
+      width: 20px;
+      height: 1px;
+      background: var(--accent-sky);
+      opacity: 0.6;
+    }
+
+    .header h1 {
+      font-size: 2.2rem;
+      font-weight: 700;
+      letter-spacing: -0.04em;
+      color: var(--text-primary);
+      line-height: 1.1;
+      margin-bottom: 12px;
+    }
+
+    .header p {
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+      line-height: 1.6;
+      max-width: 42ch;
+    }
+
+    /* ── Diagram ── */
+    .diagram {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* ── Node ── */
+    .node {
+      width: 100%;
+      border-radius: 20px;
+      padding: 24px 28px;
+      position: relative;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+      transition: border-color 0.25s ease, box-shadow 0.25s ease;
+      cursor: default;
+    }
+
+    .node:hover {
+      border-color: var(--border-hover);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 0 0 1px rgba(255,255,255,0.03);
+    }
+
+    /* Left accent bar */
+    .node::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 20%;
+      height: 60%;
+      width: 2px;
+      border-radius: 0 2px 2px 0;
+      opacity: 0.7;
+    }
+
+    .node-user::before     { background: var(--accent-sky); }
+    .node-frontend::before { background: var(--accent-sky); }
+    .node-server::before   { background: var(--accent-violet); }
+    .node-openrouter::before { background: var(--accent-amber); }
+    .node-model::before    { background: var(--accent-emerald); }
+
+    .node-inner {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      align-items: start;
+    }
+
+    .node-main { min-width: 0; }
+
+    .node-step {
+      font-family: 'Geist Mono', monospace;
+      font-size: 0.6rem;
+      font-weight: 500;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      margin-bottom: 5px;
+    }
+
+    .node-title {
+      font-size: 1.05rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      margin-bottom: 6px;
+      color: var(--text-primary);
+    }
+
+    .node-file {
+      font-family: 'Geist Mono', monospace;
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+      letter-spacing: -0.01em;
+    }
+
+    .node-desc {
+      font-size: 0.8rem;
+      line-height: 1.6;
+      color: var(--text-secondary);
+    }
+
+    /* Badge */
+    .node-badge {
+      font-family: 'Geist Mono', monospace;
+      font-size: 0.58rem;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 4px 10px;
+      border-radius: 99px;
+      border: 1px solid;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .badge-sky    { color: var(--accent-sky);     border-color: rgba(56,189,248,0.2);  background: rgba(56,189,248,0.05); }
+    .badge-violet { color: var(--accent-violet);  border-color: rgba(167,139,250,0.2); background: rgba(167,139,250,0.05); }
+    .badge-amber  { color: var(--accent-amber);   border-color: rgba(251,191,36,0.2);  background: rgba(251,191,36,0.05); }
+    .badge-emerald{ color: var(--accent-emerald); border-color: rgba(52,211,153,0.2);  background: rgba(52,211,153,0.05); }
+
+    /* Pills */
+    .pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 14px;
+    }
+
+    .pill {
+      font-family: 'Geist Mono', monospace;
+      font-size: 0.62rem;
+      font-weight: 400;
+      padding: 3px 9px;
+      border-radius: 6px;
+      letter-spacing: 0.02em;
+      border: 1px solid;
+    }
+
+    .pill-sky    { color: rgba(56,189,248,0.8);   border-color: rgba(56,189,248,0.15);  background: rgba(56,189,248,0.06); }
+    .pill-violet { color: rgba(167,139,250,0.8);  border-color: rgba(167,139,250,0.15); background: rgba(167,139,250,0.06); }
+    .pill-amber  { color: rgba(251,191,36,0.8);   border-color: rgba(251,191,36,0.15);  background: rgba(251,191,36,0.06); }
+    .pill-emerald{ color: rgba(52,211,153,0.8);   border-color: rgba(52,211,153,0.15);  background: rgba(52,211,153,0.06); }
+
+    /* Color per node */
+    .step-sky     { color: var(--accent-sky); }
+    .step-violet  { color: var(--accent-violet); }
+    .step-amber   { color: var(--accent-amber); }
+    .step-emerald { color: var(--accent-emerald); }
+
+    /* ── Connector ── */
+    .connector {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+      padding: 0 40px;
+      gap: 0;
+      position: relative;
+    }
+
+    .connector-line {
+      width: 1px;
+      height: 14px;
+      background: var(--border-hover);
+    }
+
+    .connector-body {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 10px 0;
+      width: 100%;
+    }
+
+    .connector-rule {
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent);
+    }
+
+    .connector-info {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+    }
+
+    .connector-arrow {
+      width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .connector-arrow svg {
+      width: 12px;
+      height: 12px;
+    }
+
+    .connector-label {
+      font-family: 'Geist Mono', monospace;
+      font-size: 0.62rem;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .connector-sub {
+      font-size: 0.67rem;
+      color: var(--text-muted);
+      white-space: nowrap;
+      text-align: center;
+      letter-spacing: -0.01em;
+    }
+
+    /* ── Return banner ── */
+    .return-banner {
+      width: 100%;
+      margin-top: 2px;
+      border-radius: 14px;
+      padding: 18px 24px;
+      background: rgba(52,211,153,0.04);
+      border: 1px solid rgba(52,211,153,0.12);
+      box-shadow: inset 0 1px 0 rgba(52,211,153,0.06);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .return-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: rgba(52,211,153,0.08);
+      border: 1px solid rgba(52,211,153,0.15);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .return-icon svg { width: 14px; height: 14px; color: var(--accent-emerald); }
+
+    .return-text-label {
+      font-family: 'Geist Mono', monospace;
+      font-size: 0.62rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--accent-emerald);
+      margin-bottom: 3px;
+    }
+
+    .return-text-desc {
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    /* ── Legend ── */
+    .legend {
+      display: flex;
+      gap: 20px;
+      margin-top: 56px;
+      flex-wrap: wrap;
+      justify-content: center;
+      padding-top: 28px;
+      border-top: 1px solid var(--border);
+      width: 100%;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      letter-spacing: 0.02em;
+    }
+
+    .legend-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    /* ── Animations ── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes pulse-line {
+      0%, 100% { opacity: 0.3; }
+      50%       { opacity: 1; }
+    }
+
+    .node { animation: fadeUp 0.5s cubic-bezier(0.16,1,0.3,1) both; }
+    .node:nth-child(1)  { animation-delay: 0.05s; }
+    .node:nth-child(3)  { animation-delay: 0.15s; }
+    .node:nth-child(5)  { animation-delay: 0.25s; }
+    .node:nth-child(7)  { animation-delay: 0.35s; }
+    .node:nth-child(9)  { animation-delay: 0.45s; }
+
+    .connector { animation: fadeUp 0.4s cubic-bezier(0.16,1,0.3,1) both; }
+    .connector:nth-child(2)  { animation-delay: 0.10s; }
+    .connector:nth-child(4)  { animation-delay: 0.20s; }
+    .connector:nth-child(6)  { animation-delay: 0.30s; }
+    .connector:nth-child(8)  { animation-delay: 0.40s; }
+    .connector:nth-child(10) { animation-delay: 0.50s; }
+
+    .connector-line { animation: pulse-line 2.5s ease-in-out infinite; }
+
+  </style>
+</head>
+<body>
+<div class="page-content">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-eyebrow">Architecture</div>
+    <h1>Data Flow</h1>
+    <p>How a message travels from the browser through your Express server, OpenRouter, and back as a streamed response.</p>
+  </div>
+
+  <div class="diagram">
+
+    <!-- 1. USER -->
+    <div class="node node-user">
+      <div class="node-inner">
+        <div class="node-main">
+          <div class="node-step step-sky">01 — User</div>
+          <div class="node-title">Browser</div>
+          <div class="node-file">ruixen-moon-chat.tsx</div>
+          <div class="node-desc">Types a message and hits send. Optionally pastes a resume or job posting before chatting. Chat history, resume, and job posting are all stored in localStorage.</div>
+          <div class="pills">
+            <span class="pill pill-sky">message text</span>
+            <span class="pill pill-sky">resumeContext</span>
+            <span class="pill pill-sky">jobContext</span>
+          </div>
+        </div>
+        <span class="node-badge badge-sky">Origin</span>
+      </div>
+    </div>
+
+    <!-- Connector 1→2 -->
+    <div class="connector">
+      <div class="connector-line"></div>
+      <div class="connector-body">
+        <div class="connector-rule"></div>
+        <div class="connector-info">
+          <div class="connector-arrow">
+            <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" color="#38bdf8">
+              <path d="M6 1v10M2 7l4 4 4-4"/>
+            </svg>
+          </div>
+          <div class="connector-label" style="color:#38bdf8;">POST /api/chat</div>
+          <div class="connector-sub">JSON · messages[] + context strings</div>
+        </div>
+        <div class="connector-rule"></div>
+      </div>
+      <div class="connector-line"></div>
+    </div>
+
+    <!-- 2. FRONTEND -->
+    <div class="node node-frontend">
+      <div class="node-inner">
+        <div class="node-main">
+          <div class="node-step step-sky">02 — Frontend</div>
+          <div class="node-title">React + Vite</div>
+          <div class="node-file">client/src/components/ui/ruixen-moon-chat.tsx</div>
+          <div class="node-desc">Packages the full chat history and any context into a JSON body and sends it to the Express server. Simultaneously opens a stream reader to display the AI response word by word as it arrives.</div>
+          <div class="pills">
+            <span class="pill pill-sky">fetch POST</span>
+            <span class="pill pill-sky">ReadableStream reader</span>
+            <span class="pill pill-sky">SSE parser</span>
+          </div>
+        </div>
+        <span class="node-badge badge-sky">Client</span>
+      </div>
+    </div>
+
+    <!-- Connector 2→3 -->
+    <div class="connector">
+      <div class="connector-line"></div>
+      <div class="connector-body">
+        <div class="connector-rule"></div>
+        <div class="connector-info">
+          <div class="connector-arrow">
+            <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" color="#a78bfa">
+              <path d="M6 1v10M2 7l4 4 4-4"/>
+            </svg>
+          </div>
+          <div class="connector-label" style="color:#a78bfa;">Forwarded internally</div>
+          <div class="connector-sub">localhost:3000 · same process</div>
+        </div>
+        <div class="connector-rule"></div>
+      </div>
+      <div class="connector-line"></div>
+    </div>
+
+    <!-- 3. EXPRESS SERVER -->
+    <div class="node node-server">
+      <div class="node-inner">
+        <div class="node-main">
+          <div class="node-step step-violet">03 — Backend</div>
+          <div class="node-title">Express Server</div>
+          <div class="node-file">src/server.ts</div>
+          <div class="node-desc">The core of the app. Reads the incoming request, prepends the system prompt (Ruixen's persona + resume + job context), and calls OpenRouter with the full assembled message array. The API key lives here and never reaches the browser.</div>
+          <div class="pills">
+            <span class="pill pill-violet">system prompt inject</span>
+            <span class="pill pill-violet">resume append</span>
+            <span class="pill pill-violet">job context append</span>
+            <span class="pill pill-violet">API key guard</span>
+          </div>
+        </div>
+        <span class="node-badge badge-violet">Core logic</span>
+      </div>
+    </div>
+
+    <!-- Connector 3→4 -->
+    <div class="connector">
+      <div class="connector-line"></div>
+      <div class="connector-body">
+        <div class="connector-rule"></div>
+        <div class="connector-info">
+          <div class="connector-arrow">
+            <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" color="#fbbf24">
+              <path d="M6 1v10M2 7l4 4 4-4"/>
+            </svg>
+          </div>
+          <div class="connector-label" style="color:#fbbf24;">HTTPS to OpenRouter</div>
+          <div class="connector-sub">openrouter.ai/api/v1 · Authorization header · stream: true</div>
+        </div>
+        <div class="connector-rule"></div>
+      </div>
+      <div class="connector-line"></div>
+    </div>
+
+    <!-- 4. OPENROUTER -->
+    <div class="node node-openrouter">
+      <div class="node-inner">
+        <div class="node-main">
+          <div class="node-step step-amber">04 — Gateway</div>
+          <div class="node-title">OpenRouter</div>
+          <div class="node-file">openrouter.ai/api/v1/chat/completions</div>
+          <div class="node-desc">Validates the API key, reads the model ID from the request, and routes the conversation to the correct AI provider. Acts as a single unified gateway so you don't need separate accounts for each model vendor.</div>
+          <div class="pills">
+            <span class="pill pill-amber">key validation</span>
+            <span class="pill pill-amber">model routing</span>
+            <span class="pill pill-amber">provider dispatch</span>
+          </div>
+        </div>
+        <span class="node-badge badge-amber">Gateway</span>
+      </div>
+    </div>
+
+    <!-- Connector 4→5 -->
+    <div class="connector">
+      <div class="connector-line"></div>
+      <div class="connector-body">
+        <div class="connector-rule"></div>
+        <div class="connector-info">
+          <div class="connector-arrow">
+            <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" color="#34d399">
+              <path d="M6 1v10M2 7l4 4 4-4"/>
+            </svg>
+          </div>
+          <div class="connector-label" style="color:#34d399;">Dispatched to model</div>
+          <div class="connector-sub">openai/gpt-oss-120b:free · set in .env</div>
+        </div>
+        <div class="connector-rule"></div>
+      </div>
+      <div class="connector-line"></div>
+    </div>
+
+    <!-- 5. AI MODEL -->
+    <div class="node node-model">
+      <div class="node-inner">
+        <div class="node-main">
+          <div class="node-step step-emerald">05 — Model</div>
+          <div class="node-title">GPT-OSS 120B</div>
+          <div class="node-file">openai/gpt-oss-120b:free via OpenRouter</div>
+          <div class="node-desc">Reads the full assembled context — system prompt, resume, job posting, and conversation history — and generates a response token by token. Each token streams back through OpenRouter and Express to the browser in real time.</div>
+          <div class="pills">
+            <span class="pill pill-emerald">reads full context</span>
+            <span class="pill pill-emerald">token-by-token output</span>
+            <span class="pill pill-emerald">SSE chunks</span>
+          </div>
+        </div>
+        <span class="node-badge badge-emerald">Inference</span>
+      </div>
+    </div>
+
+    <!-- Connector return -->
+    <div class="connector">
+      <div class="connector-line"></div>
+      <div class="connector-body">
+        <div class="connector-rule"></div>
+        <div class="connector-info">
+          <div class="connector-arrow">
+            <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" color="#34d399">
+              <path d="M6 11V1M2 5l4-4 4 4"/>
+            </svg>
+          </div>
+          <div class="connector-label" style="color:#34d399;">Streamed back</div>
+          <div class="connector-sub">Model → OpenRouter → Express → Browser · data: &#123;content&#125;\n\n</div>
+        </div>
+        <div class="connector-rule"></div>
+      </div>
+      <div class="connector-line"></div>
+    </div>
+
+    <!-- Return banner -->
+    <div class="return-banner">
+      <div class="return-icon">
+        <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M7 1v12M3 9l4 4 4-4" stroke="#34d399"/>
+        </svg>
+      </div>
+      <div>
+        <div class="return-text-label">Response rendered</div>
+        <div class="return-text-desc">Each token appends to the message bubble live. Once complete, the full reply is saved to localStorage so it persists across page refreshes.</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Legend -->
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#38bdf8;"></div> User / Browser</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#38bdf8;"></div> React Frontend</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#a78bfa;"></div> Express Server</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#fbbf24;"></div> OpenRouter Gateway</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#34d399;"></div> AI Model</div>
+  </div>
+
+</div>
+</body>
+</html>

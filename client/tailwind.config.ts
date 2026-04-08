@@ -5,7 +5,7 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        display: ["Cormorant Garamond", "serif"],
+        display: ["Playfair Display", "serif"],
         sans: ["DM Sans", "sans-serif"],
         mono: ["JetBrains Mono", "monospace"],
       },

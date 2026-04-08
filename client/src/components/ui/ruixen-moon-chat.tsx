@@ -14,6 +14,7 @@ import {
   X,
   Check,
   Link,
+  SquarePen,
 } from "lucide-react";
 
 interface Message {
@@ -92,27 +93,89 @@ const quickActions = [
   },
 ];
 
+const URL_REGEX = /(https?:\/\/[^\s]+)/g;
+
+function renderMessageContent(content: string) {
+  const parts = content.split(URL_REGEX);
+  return parts.map((part, i) => {
+    if (URL_REGEX.test(part)) {
+      URL_REGEX.lastIndex = 0;
+      return (
+        <a
+          key={i}
+          href={part}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-blue-600 underline underline-offset-2 hover:text-blue-800 break-all"
+        >
+          {part}
+        </a>
+      );
+    }
+    return <span key={i}>{part}</span>;
+  });
+}
+
+const STORAGE_KEY = "ruixen_chat_history";
+const RESUME_KEY = "ruixen_resume";
+const JOB_KEY = "ruixen_job_posting";
+
+const GREETING: Message = {
+  role: "assistant",
+  content: "Hi! I'm Ruixen, your AI career coach. Paste your resume, share a job posting, or tell me what you're working on — I'll help you stand out.",
+};
+
+function loadFromStorage<T>(key: string, fallback: T): T {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as T) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
 export default function RuixenMoonChat({ onBack }: RuixenMoonChatProps) {
   const [message, setMessage] = useState("");
-  const [history, setHistory] = useState<Message[]>([
-    {
-      role: "assistant",
-      content: "Hi! I'm Ruixen, your AI career coach. Paste your resume, share a job posting, or tell me what you're working on — I'll help you stand out.",
-    },
-  ]);
+  const [history, setHistory] = useState<Message[]>(() =>
+    loadFromStorage<Message[]>(STORAGE_KEY, [GREETING])
+  );
   const [streamingContent, setStreamingContent] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState("");
 
-  // Resume state
-  const [resume, setResume] = useState("");
+  // Resume state — persisted
+  const [resume, setResumeState] = useState<string>(() =>
+    loadFromStorage<string>(RESUME_KEY, "")
+  );
   const [resumeDraft, setResumeDraft] = useState("");
   const [showResumeModal, setShowResumeModal] = useState(false);
 
-  // Job posting state
-  const [jobPosting, setJobPosting] = useState("");
+  // Job posting state — persisted
+  const [jobPosting, setJobPostingState] = useState<string>(() =>
+    loadFromStorage<string>(JOB_KEY, "")
+  );
   const [jobPostingDraft, setJobPostingDraft] = useState("");
   const [showJobModal, setShowJobModal] = useState(false);
+
+  // Persist history whenever it changes
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+  }, [history]);
+
+  const setResume = (val: string) => {
+    setResumeState(val);
+    localStorage.setItem(RESUME_KEY, JSON.stringify(val));
+  };
+
+  const setJobPosting = (val: string) => {
+    setJobPostingState(val);
+    localStorage.setItem(JOB_KEY, JSON.stringify(val));
+  };
+
+  const clearHistory = () => {
+    setHistory([GREETING]);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify([GREETING]));
+  };
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const readerRef = useRef<ReadableStreamDefaultReader<Uint8Array> | null>(null);
@@ -401,7 +464,16 @@ export default function RuixenMoonChat({ onBack }: RuixenMoonChatProps) {
             Career Coach
           </span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={clearHistory}
+            disabled={isStreaming}
+            className="flex items-center gap-1.5 text-zinc-400 text-xs hover:text-zinc-950 transition-colors duration-200 disabled:opacity-40"
+          >
+            <SquarePen className="w-3.5 h-3.5" />
+            New chat
+          </button>
+          <span className="text-zinc-200 select-none">|</span>
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse-dot" />
           <span className="text-xs text-zinc-400">Online</span>
         </div>
@@ -434,7 +506,7 @@ export default function RuixenMoonChat({ onBack }: RuixenMoonChatProps) {
                       : "bg-white border border-zinc-100 text-zinc-700 rounded-bl-sm shadow-[0_2px_8px_-4px_rgba(0,0,0,0.06)]"
                   )}
                 >
-                  {msg.content}
+                  {msg.role === "assistant" ? renderMessageContent(msg.content) : msg.content}
                 </div>
               </div>
             ))}

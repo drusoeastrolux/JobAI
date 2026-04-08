@@ -92,7 +92,12 @@ const quickActions = [
 
 export default function RuixenMoonChat({ onBack }: RuixenMoonChatProps) {
   const [message, setMessage] = useState("");
-  const [history, setHistory] = useState<Message[]>([]);
+  const [history, setHistory] = useState<Message[]>([
+    {
+      role: "assistant",
+      content: "Hi! I'm Ruixen, your AI career coach. Paste your resume, share a job posting, or tell me what you're working on — I'll help you stand out.",
+    },
+  ]);
   const [streamingContent, setStreamingContent] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState("");
@@ -293,6 +298,23 @@ export default function RuixenMoonChat({ onBack }: RuixenMoonChatProps) {
                   </div>
                 </div>
               ))}
+
+              {/* Quick actions — show only until user sends first message */}
+              {history.length === 1 && !isStreaming && (
+                <div className="flex flex-wrap gap-2 pl-10">
+                  {quickActions.map((action) => (
+                    <button
+                      key={action.label}
+                      type="button"
+                      onClick={() => sendMessage(action.prompt)}
+                      className="flex items-center gap-2 px-4 py-2 text-zinc-600 text-xs font-medium rounded-full border border-zinc-200 hover:border-zinc-400 hover:text-zinc-950 transition-all duration-200 active:scale-[0.98] bg-white"
+                    >
+                      <action.icon className="w-3.5 h-3.5" strokeWidth={1.5} />
+                      {action.label}
+                    </button>
+                  ))}
+                </div>
+              )}
 
               {/* Streaming response */}
               {isStreaming && (

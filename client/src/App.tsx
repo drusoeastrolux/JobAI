@@ -1,14 +1,13 @@
+import { useState } from "react";
 import RuixenMoonChat from "@/components/ui/ruixen-moon-chat";
+import LandingPage from "@/components/ui/LandingPage";
 
 export default function App() {
-  return (
-    <main className="min-h-screen w-full bg-black text-white">
-      <section className="flex justify-center items-start w-full">
-        <RuixenMoonChat />
-      </section>
-      <footer className="text-center text-neutral-500 py-2 mt-10 border-t border-neutral-800 text-sm">
-        © {new Date().getFullYear()} ChatAgent
-      </footer>
-    </main>
-  );
+  const [view, setView] = useState<"landing" | "chat">("landing");
+
+  if (view === "chat") {
+    return <RuixenMoonChat onBack={() => setView("landing")} />;
+  }
+
+  return <LandingPage onLaunchChat={() => setView("chat")} />;
 }

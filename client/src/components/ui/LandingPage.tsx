@@ -1,22 +1,24 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowRight, ChevronDown } from "lucide-react";
+import { ArrowRight, BadgeCheck, ChevronDown, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface LandingPageProps {
   onLaunchChat: () => void;
 }
 
-/* ── Directional Hover Fill Button ────────────────────────────────────────── */
+/* ── Directional Hover Fill Button ───────────────────────────────────────── */
 function DirectionalButton({
   onClick,
   children,
   className = "",
-  fillClassName = "bg-zinc-800",
+  fillClassName = "bg-primary-dim",
+  style,
 }: {
-  onClick: () => void;
+  onClick?: () => void;
   children: React.ReactNode;
   className?: string;
   fillClassName?: string;
+  style?: React.CSSProperties;
 }) {
   const btnRef = useRef<HTMLButtonElement>(null);
   const fillRef = useRef<HTMLSpanElement>(null);
@@ -39,16 +41,17 @@ function DirectionalButton({
     const t = getTranslate(e);
     fillRef.current.style.transition = "none";
     fillRef.current.style.transform = t;
-    fillRef.current.getBoundingClientRect(); // force reflow
-    fillRef.current.style.transition = "transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)";
+    fillRef.current.getBoundingClientRect();
+    fillRef.current.style.transition =
+      "transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)";
     fillRef.current.style.transform = "translate(0, 0)";
   };
 
   const handleMouseLeave = (e: React.MouseEvent) => {
     if (!fillRef.current) return;
-    const t = getTranslate(e);
-    fillRef.current.style.transition = "transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)";
-    fillRef.current.style.transform = t;
+    fillRef.current.style.transition =
+      "transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)";
+    fillRef.current.style.transform = getTranslate(e);
   };
 
   return (
@@ -57,6 +60,7 @@ function DirectionalButton({
       onClick={onClick}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
+      style={style}
       className={cn("relative overflow-hidden", className)}
     >
       <span
@@ -69,7 +73,7 @@ function DirectionalButton({
   );
 }
 
-/* ── Scroll-triggered Fade-in Section ─────────────────────────────────────── */
+/* ── Scroll-triggered Fade-in ─────────────────────────────────────────────── */
 function FadeInSection({
   children,
   className,
@@ -92,7 +96,7 @@ function FadeInSection({
           observer.disconnect();
         }
       },
-      { threshold: 0.12 }
+      { threshold: 0.1 }
     );
     observer.observe(el);
     return () => observer.disconnect();
@@ -124,18 +128,15 @@ function CounterStat({ value, label }: { value: string; label: string }) {
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (!entry.isIntersecting || startedRef.current) return;
         startedRef.current = true;
         observer.disconnect();
-
         if (value.startsWith("<")) {
           setDisplayed(value);
           return;
         }
-
         const hasX = value.includes("x");
         const hasPercent = value.includes("%");
         const numStr = value.replace(/[^0-9.]/g, "");
@@ -143,38 +144,35 @@ function CounterStat({ value, label }: { value: string; label: string }) {
         const isDecimal = numStr.includes(".");
         const duration = 1800;
         const startTime = performance.now();
-
         const tick = (now: number) => {
           const elapsed = now - startTime;
           const progress = Math.min(elapsed / duration, 1);
           const eased = 1 - Math.pow(1 - progress, 3);
           const current = target * eased;
-
           let str = isDecimal
             ? current.toFixed(1)
             : Math.round(current).toLocaleString();
           if (hasX) str += "x";
           if (hasPercent) str += "%";
-
           setDisplayed(str);
           if (progress < 1) requestAnimationFrame(tick);
         };
-
         requestAnimationFrame(tick);
       },
       { threshold: 0.5 }
     );
-
     observer.observe(el);
     return () => observer.disconnect();
   }, [value]);
 
   return (
-    <div ref={ref} className="flex flex-col items-center py-6 px-6">
-      <span className="font-display text-3xl font-light text-zinc-950 tracking-tight">
+    <div ref={ref} className="flex flex-col items-center py-8 px-6">
+      <span className="font-headline text-3xl text-on-surface tracking-tight italic">
         {displayed}
       </span>
-      <span className="text-xs text-zinc-400 mt-1 tracking-wide">{label}</span>
+      <span className="text-xs text-on-surface-variant mt-1.5 tracking-[0.1em] font-body">
+        {label}
+      </span>
     </div>
   );
 }
@@ -193,18 +191,16 @@ function MarqueeStrip() {
     "Offer Negotiation",
     "Executive Positioning",
   ];
-
   const doubled = [...items, ...items];
-
   return (
-    <div className="border-y border-zinc-100 bg-white overflow-hidden py-4">
+    <div className="border-y border-surface-container bg-surface overflow-hidden py-4">
       <div className="flex animate-marquee whitespace-nowrap">
         {doubled.map((item, i) => (
           <span key={i} className="inline-flex items-center gap-5 px-5">
-            <span className="text-[11px] font-medium tracking-[0.18em] uppercase text-zinc-350 text-zinc-400">
+            <span className="text-[11px] font-medium tracking-[0.18em] uppercase text-outline-variant">
               {item}
             </span>
-            <span className="w-1 h-1 rounded-full bg-zinc-200 flex-shrink-0" />
+            <span className="w-1 h-1 rounded-full bg-outline-variant/60 flex-shrink-0" />
           </span>
         ))}
       </div>
@@ -212,42 +208,436 @@ function MarqueeStrip() {
   );
 }
 
+/* ── Resume Document Mockup ───────────────────────────────────────────────── */
+function ResumeDocumentCard() {
+  return (
+    <div className="bg-surface-container-lowest w-full h-full rounded-2xl p-10 relative overflow-hidden ring-1 ring-white/60">
+      <div
+        className="absolute inset-0 opacity-[0.025] pointer-events-none rounded-2xl"
+        style={{
+          backgroundImage: "var(--paper-grain)",
+          backgroundSize: "200px 200px",
+        }}
+      />
+      <div
+        className="absolute top-0 right-0 w-52 h-52 rounded-bl-full blur-3xl"
+        style={{ background: "rgba(119,90,25,0.06)" }}
+      />
+
+      {/* Name block */}
+      <div className="mb-8 pb-6 border-b border-primary/10">
+        <div className="w-44 h-5 bg-on-surface/90 rounded-sm mb-2.5" />
+        <div
+          className="w-28 h-3 rounded-sm mb-3 border-l-2 border-primary/40 pl-2"
+          style={{ background: "rgba(119,90,25,0.25)" }}
+        />
+        <div className="flex gap-3">
+          <div className="w-20 h-2 bg-surface-container rounded-sm" />
+          <div className="w-16 h-2 bg-surface-container rounded-sm" />
+        </div>
+      </div>
+
+      {/* Experience */}
+      <div className="mb-7">
+        <div
+          className="w-20 h-2.5 rounded-sm mb-4"
+          style={{ background: "rgba(119,90,25,0.35)" }}
+        />
+        <div className="space-y-2.5">
+          {([1, 0.9, 0.75, "accent", 1, 0.7] as (number | "accent")[]).map(
+            (w, i) => (
+              <div
+                key={i}
+                className="h-2 rounded-full"
+                style={{
+                  width: `${(w === "accent" ? 0.85 : w) * 100}%`,
+                  background:
+                    w === "accent"
+                      ? "rgba(119,90,25,0.22)"
+                      : "rgba(47,51,51,0.07)",
+                }}
+              />
+            )
+          )}
+        </div>
+      </div>
+
+      {/* Skills */}
+      <div className="mb-7">
+        <div
+          className="w-14 h-2.5 rounded-sm mb-4"
+          style={{ background: "rgba(119,90,25,0.35)" }}
+        />
+        <div className="flex gap-2 flex-wrap">
+          {[52, 68, 44, 60, 48].map((w, i) => (
+            <div
+              key={i}
+              className="h-5 rounded-full border border-primary/10"
+              style={{
+                width: `${w}px`,
+                background: "rgba(255,222,165,0.45)",
+              }}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* Education */}
+      <div>
+        <div
+          className="w-24 h-2.5 rounded-sm mb-4"
+          style={{ background: "rgba(119,90,25,0.35)" }}
+        />
+        <div className="space-y-2">
+          {[0.8, 0.6].map((w, i) => (
+            <div
+              key={i}
+              className="h-2 rounded-full"
+              style={{
+                width: `${w * 100}%`,
+                background: "rgba(47,51,51,0.07)",
+              }}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── AI Insight Glassmorphism Card ────────────────────────────────────────── */
+function AIInsightGlassCard() {
+  return (
+    <div className="glass-panel p-7 rounded-2xl w-72">
+      <div className="flex items-center gap-3 mb-5">
+        <div
+          className="p-2 rounded-lg"
+          style={{ background: "rgba(119,90,25,0.15)" }}
+        >
+          <Sparkles className="w-4 h-4 text-primary" />
+        </div>
+        <span className="font-headline italic text-base text-on-surface">
+          AI Insight
+        </span>
+      </div>
+      <div className="space-y-3 mb-5">
+        {[1, 0.75, 5 / 6].map((w, i) => (
+          <div
+            key={i}
+            className="h-2 rounded-full animate-pulse"
+            style={{
+              width: `${w * 100}%`,
+              background: "rgba(119,90,25,0.12)",
+              animationDelay: `${i * 0.2}s`,
+            }}
+          />
+        ))}
+      </div>
+      <div className="pt-4 border-t" style={{ borderColor: "rgba(119,90,25,0.1)" }}>
+        <p className="font-headline italic text-on-surface-variant text-sm leading-relaxed">
+          "Strengthen the opening to emphasize measurable leadership outcomes."
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/* ── Workshop Mini Demos ──────────────────────────────────────────────────── */
+
+function RewriteMiniDemo() {
+  const [phase, setPhase] = useState<"before" | "after">("before");
+
+  useEffect(() => {
+    const alive = { current: true };
+    let timer = 0;
+
+    const cycle = (current: "before" | "after") => {
+      if (!alive.current) return;
+      setPhase(current);
+      timer = window.setTimeout(
+        () => cycle(current === "before" ? "after" : "before"),
+        current === "before" ? 1800 : 2600
+      );
+    };
+
+    timer = window.setTimeout(() => cycle("before"), 400);
+    return () => {
+      alive.current = false;
+      clearTimeout(timer);
+    };
+  }, []);
+
+  return (
+    <div className="w-60 rounded-xl overflow-hidden border border-outline-variant/20 bg-surface-container-lowest text-[10px] shrink-0">
+      <div className="px-4 py-2.5 border-b border-outline-variant/15 flex items-center gap-2">
+        <span className="w-1.5 h-1.5 rounded-full bg-primary/50 animate-pulse-dot" />
+        <span className="text-on-surface-variant tracking-wide font-medium uppercase">
+          AI rewriting
+        </span>
+      </div>
+      <div className="px-4 py-3 min-h-[3.5rem] flex flex-col justify-center gap-2">
+        <p
+          className="leading-snug transition-all duration-400"
+          style={{
+            color:
+              phase === "after" ? "rgba(47,51,51,0.25)" : "rgba(47,51,51,0.5)",
+            textDecoration: phase === "after" ? "line-through" : "none",
+          }}
+        >
+          Helped manage social media accounts
+        </p>
+        <p
+          className="text-on-surface font-medium leading-snug transition-all duration-500"
+          style={{
+            opacity: phase === "after" ? 1 : 0,
+            transform: `translateY(${phase === "after" ? 0 : 4}px)`,
+          }}
+        >
+          Grew Instagram 340% in 6 months, 47K followers
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function ATSScoreDemo() {
+  const [score, setScore] = useState(0);
+
+  useEffect(() => {
+    let frameId = 0;
+    let loopId = 0;
+    let startTime = 0;
+    const duration = 1400;
+    const target = 94;
+
+    const animate = (timestamp: number) => {
+      if (!startTime) startTime = timestamp;
+      const progress = Math.min((timestamp - startTime) / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setScore(Math.round(target * eased));
+      if (progress < 1) frameId = requestAnimationFrame(animate);
+    };
+
+    const cycle = () => {
+      cancelAnimationFrame(frameId);
+      startTime = 0;
+      setScore(0);
+      frameId = requestAnimationFrame(animate);
+    };
+
+    cycle();
+    loopId = window.setInterval(cycle, 4200);
+
+    return () => {
+      cancelAnimationFrame(frameId);
+      clearInterval(loopId);
+    };
+  }, []);
+
+  return (
+    <div className="w-60 rounded-xl border border-outline-variant/20 bg-surface-container-lowest px-4 py-4 text-[10px] shrink-0">
+      <div className="flex justify-between items-center mb-3">
+        <span className="text-on-surface-variant tracking-wide font-medium uppercase">
+          ATS Match Score
+        </span>
+        <span className="font-mono text-primary font-bold text-xs tabular-nums">
+          {score}%
+        </span>
+      </div>
+      <div className="h-1.5 bg-surface-container rounded-full overflow-hidden mb-2.5">
+        <div
+          className="h-full rounded-full"
+          style={{
+            width: `${score}%`,
+            background: "#775a19",
+            transition: "width 0.05s linear",
+          }}
+        />
+      </div>
+      <div className="flex justify-between">
+        <span className="text-on-surface/30">Keyword relevance</span>
+        <span
+          className="font-medium transition-colors duration-300"
+          style={{ color: score > 85 ? "#775a19" : "rgba(47,51,51,0.4)" }}
+        >
+          {score > 85 ? "Strong" : score > 55 ? "Building..." : "Scanning..."}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function MatchListDemo() {
+  const jobs = [
+    { title: "Senior PM", company: "Vanta", fit: "97%" },
+    { title: "Dir. of Product", company: "Coda", fit: "91%" },
+    { title: "Product Lead", company: "Retool", fit: "88%" },
+  ] as const;
+
+  const [shown, setShown] = useState(0);
+
+  useEffect(() => {
+    const alive = { current: true };
+    let timer = 0;
+
+    const advance = (n: number) => {
+      if (!alive.current) return;
+      if (n <= jobs.length) {
+        setShown(n);
+        timer = window.setTimeout(() => advance(n + 1), 480);
+      } else {
+        timer = window.setTimeout(() => {
+          if (!alive.current) return;
+          setShown(0);
+          timer = window.setTimeout(() => advance(1), 500);
+        }, 2400);
+      }
+    };
+
+    timer = window.setTimeout(() => advance(1), 700);
+    return () => {
+      alive.current = false;
+      clearTimeout(timer);
+    };
+  }, []);
+
+  return (
+    <div className="w-60 rounded-xl border border-outline-variant/20 bg-surface-container-lowest text-[10px] overflow-hidden shrink-0">
+      <div className="px-4 py-2.5 border-b border-outline-variant/15 flex items-center gap-2">
+        <span className="w-1.5 h-1.5 rounded-full bg-primary/50 animate-pulse-dot" />
+        <span className="text-on-surface-variant tracking-wide font-medium uppercase">
+          Top matches
+        </span>
+      </div>
+      <div className="px-4 py-2 space-y-0.5">
+        {jobs.map((job, i) => (
+          <div
+            key={job.title}
+            className="flex items-center justify-between py-2 border-b border-outline-variant/10 last:border-0"
+            style={{
+              opacity: shown > i ? 1 : 0,
+              transform: `translateY(${shown > i ? 0 : 5}px)`,
+              transition: "opacity 0.35s ease, transform 0.35s ease",
+            }}
+          >
+            <div>
+              <p className="text-on-surface font-semibold">{job.title}</p>
+              <p className="text-on-surface/40 mt-0.5">{job.company}</p>
+            </div>
+            <span className="font-mono font-bold text-primary">{job.fit}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ── Workshop Row ─────────────────────────────────────────────────────────── */
+function WorkshopRow({
+  num,
+  title,
+  desc,
+  demo,
+  delay = 0,
+}: {
+  num: string;
+  title: string;
+  desc: string;
+  demo: React.ReactNode;
+  delay?: number;
+}) {
+  return (
+    <FadeInSection delay={delay}>
+      <div className="group grid grid-cols-1 md:grid-cols-[64px_1fr_1.35fr_auto] gap-x-10 gap-y-3 py-10 lg:py-14 border-t border-outline-variant/20 items-start -mx-6 px-6 md:-mx-16 md:px-16 hover:bg-primary/[0.025] transition-colors duration-300 rounded-sm">
+        <span className="font-mono text-5xl font-light leading-none select-none transition-colors duration-300" style={{ color: "rgba(119,90,25,0.15)" }}>
+          {num}
+        </span>
+        <h3 className="font-headline text-2xl md:text-3xl italic text-on-surface group-hover:text-primary transition-colors duration-300 leading-tight pt-1">
+          {title}
+        </h3>
+        <p className="font-body text-on-surface-variant leading-relaxed text-[0.9rem] font-light max-w-[52ch]">
+          {desc}
+        </p>
+        <div className="hidden md:block">{demo}</div>
+      </div>
+    </FadeInSection>
+  );
+}
+
 /* ── Main Landing Page ────────────────────────────────────────────────────── */
 export default function LandingPage({ onLaunchChat }: LandingPageProps) {
   const [mounted, setMounted] = useState(false);
+  const resumeCardRef = useRef<HTMLDivElement>(null);
+  const aiCardRef = useRef<HTMLDivElement>(null);
+  const bgTextRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      const cx = window.innerWidth / 2;
+      const cy = window.innerHeight / 2;
+      const mx = (e.clientX - cx) / cx;
+      const my = (e.clientY - cy) / cy;
+
+      if (resumeCardRef.current) {
+        resumeCardRef.current.style.transform = `rotateY(${-12 + mx * 4}deg) rotateX(${5 + my * 3}deg) translate(${mx * 8}px, ${my * 6}px)`;
+      }
+      if (aiCardRef.current) {
+        aiCardRef.current.style.transform = `translate(${mx * 18}px, ${my * 14}px)`;
+      }
+      if (bgTextRef.current) {
+        bgTextRef.current.style.transform = `translateX(${mx * -22}px)`;
+      }
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    return () => window.removeEventListener("mousemove", handleMouseMove);
+  }, []);
+
   return (
-    <div className="min-h-screen bg-[#fafaf9] text-zinc-950 font-sans overflow-x-hidden">
-      {/* Grain overlay — fixed, pointer-events-none */}
+    <div className="min-h-screen bg-surface text-on-surface font-body overflow-x-hidden">
+      {/* Paper grain — fixed, pointer-events-none */}
       <div
-        className="fixed inset-0 z-[100] pointer-events-none opacity-[0.03]"
+        className="fixed inset-0 z-[100] pointer-events-none opacity-[0.025]"
         style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
+          backgroundImage: "var(--paper-grain)",
           backgroundRepeat: "repeat",
           backgroundSize: "200px 200px",
         }}
       />
 
-      {/* ── Nav ──────────────────────────────────────────────────────────── */}
-      <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-8 lg:px-16 py-5 bg-[#fafaf9]/90 backdrop-blur-md border-b border-zinc-100">
-        <span className="font-display text-xl font-medium tracking-tight text-zinc-950">
-          Ruixen AI
+      {/* ── Nav ───────────────────────────────────────────────────────────── */}
+      <nav
+        className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 md:px-12 py-6 border-b border-white/20"
+        style={{
+          background: "rgba(250,249,248,0.65)",
+          backdropFilter: "blur(20px)",
+          WebkitBackdropFilter: "blur(20px)",
+        }}
+      >
+        <span className="font-headline text-xl font-bold tracking-tighter text-on-surface">
+          Ruixen<span className="italic text-primary"> AI</span>
         </span>
 
-        <div className="hidden md:flex items-center gap-8 text-sm text-zinc-500">
+        <div className="hidden md:flex items-center gap-10">
           <a
             href="#features"
-            className="hover:text-zinc-950 transition-colors duration-200"
+            className="font-headline italic text-lg text-primary border-b border-primary pb-0.5 hover:opacity-75 transition-opacity"
           >
-            How it works
+            How It Works
           </a>
           <a
-            href="#testimonials"
-            className="hover:text-zinc-950 transition-colors duration-200"
+            href="#transformation"
+            className="font-headline italic text-lg text-on-surface/70 hover:text-primary transition-colors"
+          >
+            Results
+          </a>
+          <a
+            href="#testimonial"
+            className="font-headline italic text-lg text-on-surface/70 hover:text-primary transition-colors"
           >
             Stories
           </a>
@@ -255,593 +645,474 @@ export default function LandingPage({ onLaunchChat }: LandingPageProps) {
 
         <DirectionalButton
           onClick={onLaunchChat}
-          fillClassName="bg-zinc-800"
-          className="flex items-center gap-2 px-4 py-2 bg-zinc-950 text-white text-sm font-medium rounded-full active:scale-[0.98] active:-translate-y-[1px]"
+          fillClassName="bg-primary-dim"
+          className="flex items-center gap-2 px-7 py-2.5 bg-primary text-on-primary text-xs font-bold rounded-full uppercase tracking-widest font-body active:scale-[0.98]"
+          style={{
+            boxShadow:
+              "0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.2)",
+          }}
         >
-          Get started
-          <ArrowRight className="w-3.5 h-3.5" />
+          Get Started
         </DirectionalButton>
       </nav>
 
-      {/* ── Hero ─────────────────────────────────────────────────────────── */}
-      <section className="relative min-h-[100dvh] flex items-center pt-20 overflow-hidden">
-        {/* Gradient orbs */}
-        <div className="absolute inset-0 pointer-events-none isolate">
-          <div className="animate-orb-1 absolute -top-32 -left-32 w-[700px] h-[560px] rounded-full bg-amber-300 opacity-70 blur-[60px] mix-blend-multiply" />
-          <div className="animate-orb-2 absolute -top-16 -right-16 w-[580px] h-[580px] rounded-full bg-emerald-300 opacity-60 blur-[60px] mix-blend-multiply" />
-          <div className="animate-orb-3 absolute bottom-0 left-1/4 w-[700px] h-[380px] rounded-full bg-rose-200 opacity-65 blur-[60px] mix-blend-multiply" />
+      {/* ── Hero ──────────────────────────────────────────────────────────── */}
+      <section
+        id="hero"
+        className="relative min-h-[100dvh] flex items-center pt-20 overflow-hidden"
+      >
+        {/* Large italic background text */}
+        <div className="absolute inset-0 pointer-events-none z-0 flex items-center justify-center overflow-hidden">
           <div
-            className="animate-orb-1 absolute top-1/3 right-1/4 w-[420px] h-[420px] rounded-full bg-sky-200 opacity-55 blur-[60px] mix-blend-multiply"
-            style={{ animationDelay: "-7s" }}
-          />
+            ref={bgTextRef}
+            className="text-[20vw] font-headline italic select-none whitespace-nowrap"
+            style={{
+              color: "rgba(119,90,25,0.04)",
+              transition: "transform 0.12s ease-out",
+              willChange: "transform",
+            }}
+          >
+            Career Excellence
+          </div>
         </div>
 
-        <div className="max-w-[1400px] mx-auto px-8 lg:px-16 w-full">
-          <div className="grid grid-cols-1 lg:grid-cols-[55fr_45fr] gap-16 lg:gap-20 items-center">
-            {/* Left — content */}
+        {/* Background ambient */}
+        <div
+          className="absolute top-0 right-0 -z-10 w-[700px] h-[700px] rounded-full blur-[150px]"
+          style={{ background: "rgba(119,90,25,0.05)" }}
+        />
+
+        <div className="max-w-[1440px] mx-auto px-8 lg:px-16 w-full relative z-10">
+          <div className="grid grid-cols-1 lg:grid-cols-[7fr_5fr] gap-12 lg:gap-20 items-center">
+            {/* Left: Copy */}
             <div>
               <h1
-                className={`font-display text-5xl md:text-6xl lg:text-[5.5rem] font-light tracking-tight leading-[1.04] text-zinc-950 mb-7 ${
+                className={`font-headline text-6xl md:text-[7rem] leading-[1] text-on-surface mb-8 ${
                   mounted ? "animate-fade-in-up" : "opacity-0"
                 }`}
               >
-                The AI that
+                The craft of
                 <br />
-                <span className="italic">gets you hired</span>
+                <span className="italic text-primary">getting hired.</span>
               </h1>
 
               <p
-                className={`text-zinc-500 text-lg leading-relaxed max-w-[52ch] mb-10 ${
+                className={`font-body text-xl text-on-surface-variant max-w-xl mb-12 leading-relaxed font-light ${
                   mounted ? "animate-fade-in-up delay-100" : "opacity-0"
                 }`}
               >
-                Paste your resume, describe the role you want, and get instant
-                expert-level rewrites, ATS optimization, and job matches — all
-                in one conversation.
+                Paste your resume, describe the role you want, and get
+                expert-level rewrites, ATS optimization, and precise job
+                matches — all in one conversation.
               </p>
 
               <div
-                className={`flex flex-col sm:flex-row items-start sm:items-center gap-3 ${
+                className={`flex flex-col sm:flex-row gap-4 ${
                   mounted ? "animate-fade-in-up delay-200" : "opacity-0"
                 }`}
               >
                 <DirectionalButton
                   onClick={onLaunchChat}
-                  fillClassName="bg-zinc-800"
-                  className="flex items-center gap-2 px-6 py-3.5 bg-zinc-950 text-white text-sm font-medium rounded-full active:scale-[0.98] active:-translate-y-[1px]"
+                  fillClassName="bg-primary-dim"
+                  className="flex items-center gap-2 px-10 py-5 bg-primary text-on-primary text-xs font-bold rounded-full uppercase tracking-[0.2em] font-body active:scale-[0.98]"
+                  style={{
+                    boxShadow:
+                      "0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.15)",
+                  }}
                 >
-                  Revise my resume
-                  <ArrowRight className="w-4 h-4" />
+                  Begin Your Story
+                  <ArrowRight className="w-3.5 h-3.5" />
                 </DirectionalButton>
 
                 <a
                   href="#features"
-                  className="flex items-center gap-2 px-6 py-3.5 text-zinc-600 text-sm font-medium rounded-full border border-zinc-200 hover:border-zinc-400 hover:text-zinc-950 transition-all duration-200"
+                  className="flex items-center justify-center gap-2 px-10 py-5 text-on-surface text-xs font-bold rounded-full border border-outline-variant/30 hover:border-primary/50 hover:text-primary transition-all uppercase tracking-[0.2em] font-body"
                 >
-                  See how it works
+                  View Sample
                   <ChevronDown className="w-3.5 h-3.5" />
                 </a>
               </div>
             </div>
 
-            {/* Right — rewrite animation */}
+            {/* Right: 3D Resume Card */}
             <div
-              className={`hidden lg:block ${
-                mounted ? "animate-fade-in-up delay-300" : "opacity-0"
-              }`}
+              className="hidden lg:block relative"
+              style={{ perspective: "1500px" }}
             >
-              <RewriteAnimation />
+              <div
+                ref={resumeCardRef}
+                className="relative w-full aspect-[4/5] rounded-2xl overflow-visible"
+                style={{
+                  transform: "rotateY(-12deg) rotateX(5deg)",
+                  transition: "transform 0.12s ease-out",
+                  willChange: "transform",
+                  boxShadow:
+                    "0 20px 40px -15px rgba(47,51,51,0.15), 0 15px 25px -10px rgba(47,51,51,0.10)",
+                }}
+              >
+                <ResumeDocumentCard />
+
+                {/* Floating AI insight card */}
+                <div
+                  ref={aiCardRef}
+                  className="absolute -top-14 -right-10 z-20 hidden md:block"
+                  style={{
+                    transition: "transform 0.12s ease-out",
+                    willChange: "transform",
+                  }}
+                >
+                  <AIInsightGlassCard />
+                </div>
+
+                {/* Ambient depth glow */}
+                <div
+                  className="absolute -bottom-12 -left-12 w-48 h-48 rounded-full -z-10 blur-[100px]"
+                  style={{ background: "rgba(119,90,25,0.22)" }}
+                />
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* ── Stats strip ──────────────────────────────────────────────────── */}
-      <section className="border-y border-zinc-100 bg-white">
-        <div className="max-w-[1400px] mx-auto px-8 lg:px-16 py-10">
-          <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-zinc-100">
-            <CounterStat value="14,392" label="resumes revised this week" />
-            <CounterStat value="3.1x" label="more interview callbacks" />
-            <CounterStat value="94.7%" label="satisfaction rate" />
-            <CounterStat value="< 90s" label="first draft delivered" />
-          </div>
-        </div>
-      </section>
-
-      {/* ── Marquee strip ────────────────────────────────────────────────── */}
-      <MarqueeStrip />
-
-      {/* ── Features ─────────────────────────────────────────────────────── */}
-      <section id="features" className="py-32">
-        <div className="max-w-[1400px] mx-auto px-8 lg:px-16">
-          <FadeInSection className="mb-20">
-            <p className="text-xs tracking-[0.2em] uppercase text-zinc-400 font-medium mb-4">
-              How it works
-            </p>
-            <h2 className="font-display text-4xl md:text-5xl font-light tracking-tight leading-tight">
-              Your edge in every
-              <br />
-              <span className="italic text-zinc-400">step of the search.</span>
-            </h2>
-          </FadeInSection>
-
-          <div className="flex flex-col gap-24">
-            {/* Feature 1 */}
-            <FadeInSection>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-12 lg:gap-20 items-center">
-                <div>
-                  <div className="w-8 h-px bg-zinc-950 mb-7" />
-                  <h3 className="font-display text-3xl md:text-4xl font-light tracking-tight mb-5 leading-tight">
-                    Resume revision
-                    <br />
-                    that actually lands
-                  </h3>
-                  <p className="text-zinc-500 leading-relaxed max-w-[48ch]">
-                    Paste your resume and Ruixen rewrites every bullet point —
-                    turning vague responsibilities into measurable outcomes,
-                    fixing weak verbs, and optimizing for the ATS systems that
-                    screen you out before a human ever reads your name.
-                  </p>
-                </div>
-                <div className="bg-white border border-zinc-100 rounded-2xl p-8 shadow-[0_20px_60px_-20px_rgba(0,0,0,0.05)]">
-                  <ResumeVisual />
-                </div>
-              </div>
-            </FadeInSection>
-
-            {/* Feature 2 */}
-            <FadeInSection delay={0.05}>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-12 lg:gap-20 items-center">
-                <div className="bg-white border border-zinc-100 rounded-2xl p-8 shadow-[0_20px_60px_-20px_rgba(0,0,0,0.05)] order-last md:order-first">
-                  <JobMatchVisual />
-                </div>
-                <div>
-                  <div className="w-8 h-px bg-zinc-950 mb-7" />
-                  <h3 className="font-display text-3xl md:text-4xl font-light tracking-tight mb-5 leading-tight">
-                    Job matching
-                    <br />
-                    without the noise
-                  </h3>
-                  <p className="text-zinc-500 leading-relaxed max-w-[48ch]">
-                    Describe what you're looking for and Ruixen surfaces roles
-                    that genuinely fit — not keyword spam. Every match comes
-                    with a clear explanation of why it aligns with your
-                    background and what to emphasize in your application.
-                  </p>
-                </div>
-              </div>
-            </FadeInSection>
-
-            {/* Feature 3 */}
-            <FadeInSection delay={0.05}>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-12 lg:gap-20 items-center">
-                <div>
-                  <div className="w-8 h-px bg-zinc-950 mb-7" />
-                  <h3 className="font-display text-3xl md:text-4xl font-light tracking-tight mb-5 leading-tight">
-                    Interview prep
-                    <br />
-                    that's brutally honest
-                  </h3>
-                  <p className="text-zinc-500 leading-relaxed max-w-[48ch]">
-                    Practice your answers and get direct, specific feedback —
-                    not generic tips. Ruixen identifies exactly what's weak,
-                    what sounds rehearsed, and how to reframe your experience
-                    to match what interviewers are actually listening for.
-                  </p>
-                </div>
-                <div className="bg-zinc-950 border border-zinc-800 rounded-2xl p-8 shadow-[0_20px_60px_-20px_rgba(0,0,0,0.15)]">
-                  <InterviewVisual />
-                </div>
-              </div>
-            </FadeInSection>
-          </div>
-        </div>
-      </section>
-
-      {/* ── Testimonials ─────────────────────────────────────────────────── */}
+      {/* ── The Workshop (Features) ───────────────────────────────────────── */}
       <section
-        id="testimonials"
-        className="py-32 bg-white border-t border-zinc-100"
+        id="features"
+        className="pt-32 md:pt-48 pb-12 md:pb-16 px-6 md:px-16 relative bg-surface"
       >
-        <div className="max-w-[1400px] mx-auto px-8 lg:px-16">
-          <FadeInSection className="mb-16">
-            <p className="text-xs tracking-[0.2em] uppercase text-zinc-400 font-medium mb-4">
-              Success stories
+        <div className="max-w-[1440px] mx-auto">
+          <FadeInSection className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-4">
+            <div>
+              <span className="font-body text-primary uppercase tracking-[0.4em] text-xs font-extrabold mb-5 block">
+                The Workshop
+              </span>
+              <h2 className="font-headline text-4xl md:text-6xl text-on-surface leading-tight">
+                How Ruixen works.
+              </h2>
+            </div>
+            <p className="font-body text-on-surface-variant max-w-xs text-base leading-relaxed font-light md:text-right pb-1">
+              Three capabilities. One conversation. Every step of your search covered.
             </p>
-            <h2 className="font-display text-4xl md:text-5xl font-light tracking-tight leading-tight">
-              People who got
-              <br />
-              <span className="italic text-zinc-400">the job</span>
+          </FadeInSection>
+
+          <div>
+            <WorkshopRow
+              num="01"
+              title="Resume rewriting that lands"
+              desc="Paste your resume and Ruixen rewrites every bullet — turning vague responsibilities into measurable outcomes, fixing weak verbs, and tuning the language for the ATS filters that discard you before a human reads your name."
+              demo={<RewriteMiniDemo />}
+              delay={0}
+            />
+            <WorkshopRow
+              num="02"
+              title="ATS keywords, invisibly woven"
+              desc="Invisible to the eye but essential for the system. We embed high-impact industry keywords into your natural voice — so your resume reads like you wrote it, not like a keyword dump."
+              demo={<ATSScoreDemo />}
+              delay={0.05}
+            />
+            <WorkshopRow
+              num="03"
+              title="Job matches that actually fit"
+              desc="Describe what you want and Ruixen surfaces roles that genuinely align with your background. Every match comes with a clear explanation of why it fits and what to emphasize in your application."
+              demo={<MatchListDemo />}
+              delay={0.1}
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* ── The Transformation (Before / After) ──────────────────────────── */}
+      <section
+        id="transformation"
+        className="py-16 md:py-24 px-6 bg-surface overflow-hidden relative"
+      >
+        <div className="max-w-[1440px] mx-auto">
+          <FadeInSection className="text-center mb-24">
+            <span className="font-body text-primary uppercase tracking-[0.4em] text-xs font-extrabold mb-6 block">
+              The Transformation
+            </span>
+            <h2 className="font-headline text-4xl md:text-6xl text-on-surface italic">
+              A Visible Evolution
             </h2>
           </FadeInSection>
 
-          <div className="grid grid-cols-1 md:grid-cols-[1fr_1.15fr_0.95fr] gap-5 items-start">
-            <FadeInSection delay={0}>
-              <TestimonialCard
-                quote="I'd been applying for months with no callbacks. After one session revising my resume with Ruixen, I got three interview requests the following week. The rewrite was that different."
-                name="Priya Nandakumar"
-                role="Now Senior PM at Meridian Health"
-                offsetClass=""
-              />
+          <div
+            className="grid grid-cols-1 lg:grid-cols-2 gap-16 md:gap-20 items-center px-0 md:px-16"
+            style={{ perspective: "1500px" }}
+          >
+            {/* Before */}
+            <FadeInSection>
+              <div
+                className="relative space-y-8 opacity-40 grayscale hover:grayscale-0 hover:opacity-60 transition-all duration-700"
+                style={{ transform: "rotateY(12deg) rotateX(5deg)" }}
+              >
+                <span className="absolute -top-4 -left-4 bg-on-surface text-surface px-5 py-2 text-[10px] tracking-[0.3em] font-bold uppercase z-20 shadow-lg">
+                  Legacy
+                </span>
+                <div className="bg-white p-8 border border-outline-variant/30 shadow-2xl aspect-[3/4] flex flex-col justify-start relative overflow-hidden">
+                  {/* Name */}
+                  <div className="mb-5 pb-4 border-b border-on-surface/10">
+                    <p className="text-[11px] font-bold text-on-surface/40 tracking-wider uppercase mb-0.5">Jordan Mitchell</p>
+                    <p className="text-[9px] text-on-surface/30 tracking-wide">jordan@email.com · linkedin.com/in/jordan</p>
+                  </div>
+                  {/* Experience */}
+                  <div className="mb-4">
+                    <p className="text-[8px] font-bold uppercase tracking-[0.15em] text-on-surface/30 mb-2">Experience</p>
+                    <div className="mb-3">
+                      <p className="text-[9px] font-semibold text-on-surface/40">Social Media Manager — Acme Co.</p>
+                      <p className="text-[8px] text-on-surface/25 mb-1.5">2021 – Present</p>
+                      <ul className="space-y-1">
+                        {[
+                          "Responsible for managing social media accounts",
+                          "Helped with content creation and posting",
+                          "Worked on increasing followers and engagement",
+                          "Assisted with marketing campaigns",
+                        ].map((line) => (
+                          <li key={line} className="text-[8.5px] text-on-surface/30 flex gap-1.5">
+                            <span className="mt-[3px] flex-shrink-0">–</span>
+                            <span>{line}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-semibold text-on-surface/40">Marketing Assistant — Generic Corp.</p>
+                      <p className="text-[8px] text-on-surface/25 mb-1.5">2019 – 2021</p>
+                      <ul className="space-y-1">
+                        {[
+                          "Helped with various marketing tasks",
+                          "Supported team with reports and analysis",
+                        ].map((line) => (
+                          <li key={line} className="text-[8.5px] text-on-surface/30 flex gap-1.5">
+                            <span className="mt-[3px] flex-shrink-0">–</span>
+                            <span>{line}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                  {/* Skills */}
+                  <div>
+                    <p className="text-[8px] font-bold uppercase tracking-[0.15em] text-on-surface/30 mb-2">Skills</p>
+                    <p className="text-[8.5px] text-on-surface/30">Social Media, Content, Marketing, Excel, PowerPoint</p>
+                  </div>
+                </div>
+                <p className="font-headline italic text-center text-on-surface-variant text-lg">
+                  Functional, but forgettable.
+                </p>
+              </div>
             </FadeInSection>
-            <FadeInSection delay={0.1}>
-              <TestimonialCard
-                quote="The job matching is eerily accurate. It found a fintech role I hadn't considered but was a perfect fit for my background. I started there six weeks later. I wouldn't have found it on my own."
-                name="Tobias Vrenzel"
-                role="Software Engineer, Axis Capital"
-                offsetClass="md:mt-10"
-              />
-            </FadeInSection>
-            <FadeInSection delay={0.2}>
-              <TestimonialCard
-                quote="The interview prep is incredibly honest. It told me exactly what sounded weak and how to fix it. Best coaching I've gotten — better than the $300/hr career coach I hired last year."
-                name="Celeste Amaral"
-                role="UX Researcher, Thornfield Studio"
-                offsetClass="md:mt-4"
-              />
+
+            {/* After */}
+            <FadeInSection delay={0.15}>
+              <div
+                className="relative space-y-8 group"
+                style={{ transform: "rotateY(-12deg) rotateX(5deg)" }}
+              >
+                <span
+                  className="absolute -top-4 -right-4 text-on-primary px-5 py-2 text-[10px] tracking-[0.3em] font-bold uppercase z-20 shadow-xl"
+                  style={{ background: "#775a19" }}
+                >
+                  Curated
+                </span>
+                <div
+                  className="bg-surface-container-lowest p-8 aspect-[3/4] flex flex-col justify-start relative overflow-hidden rounded-sm group-hover:scale-[1.02] transition-transform duration-500"
+                  style={{
+                    boxShadow:
+                      "0 20px 40px -15px rgba(47,51,51,0.12), 0 15px 25px -10px rgba(47,51,51,0.08)",
+                    outline: "1px solid rgba(119,90,25,0.15)",
+                  }}
+                >
+                  <div
+                    className="absolute inset-0 opacity-[0.02] pointer-events-none"
+                    style={{
+                      backgroundImage: "var(--paper-grain)",
+                      backgroundSize: "200px 200px",
+                    }}
+                  />
+                  <div
+                    className="absolute top-0 right-0 w-36 h-36 rounded-bl-full blur-2xl"
+                    style={{ background: "rgba(119,90,25,0.06)" }}
+                  />
+                  {/* Name */}
+                  <div className="mb-5 pb-4 border-b border-primary/15">
+                    <p className="text-[11px] font-bold text-on-surface tracking-wider uppercase mb-0.5">Jordan Mitchell</p>
+                    <p className="text-[9px] text-primary/70 tracking-wide font-medium border-l-2 border-primary/30 pl-2">Growth & Brand Strategist</p>
+                    <p className="text-[9px] text-on-surface/40 mt-0.5 tracking-wide">jordan@email.com · linkedin.com/in/jordan</p>
+                  </div>
+                  {/* Experience */}
+                  <div className="mb-4">
+                    <p className="text-[8px] font-bold uppercase tracking-[0.15em] text-primary/60 mb-2">Experience</p>
+                    <div className="mb-3">
+                      <p className="text-[9px] font-semibold text-on-surface">Social Media Manager — Acme Co.</p>
+                      <p className="text-[8px] text-on-surface/40 mb-1.5">2021 – Present</p>
+                      <ul className="space-y-1">
+                        {[
+                          "Grew Instagram 340% in 6 months, driving 47K new followers and a 4.2% engagement rate",
+                          "Launched 3 campaigns that generated $280K in attributed pipeline",
+                          "Reduced content production time by 40% by building a reusable asset library",
+                        ].map((line) => (
+                          <li key={line} className="text-[8.5px] text-on-surface/60 flex gap-1.5">
+                            <span className="mt-[3px] text-primary flex-shrink-0">▸</span>
+                            <span>{line}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-semibold text-on-surface">Marketing Assistant — Generic Corp.</p>
+                      <p className="text-[8px] text-on-surface/40 mb-1.5">2019 – 2021</p>
+                      <ul className="space-y-1">
+                        {[
+                          "Authored 12 long-form reports adopted across 4 regional offices",
+                          "Coordinated 6-person cross-functional team, delivering all milestones on schedule",
+                        ].map((line) => (
+                          <li key={line} className="text-[8.5px] text-on-surface/60 flex gap-1.5">
+                            <span className="mt-[3px] text-primary flex-shrink-0">▸</span>
+                            <span>{line}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                  {/* Skills */}
+                  <div>
+                    <p className="text-[8px] font-bold uppercase tracking-[0.15em] text-primary/60 mb-2">Core Competencies</p>
+                    <div className="flex flex-wrap gap-1">
+                      {["Growth Strategy", "Content Systems", "Brand Voice", "Analytics", "A/B Testing"].map((s) => (
+                        <span key={s} className="text-[7.5px] px-2 py-0.5 rounded-full font-medium text-primary/80" style={{ background: "rgba(255,222,165,0.5)", border: "1px solid rgba(119,90,25,0.15)" }}>
+                          {s}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  {/* Verification badge */}
+                  <div
+                    className="absolute bottom-8 right-8 w-16 h-16 rounded-full flex items-center justify-center rotate-12 glass-panel"
+                  >
+                    <BadgeCheck className="w-7 h-7 text-primary" />
+                  </div>
+                </div>
+                <p className="font-headline italic text-center text-primary text-2xl font-bold">
+                  Authoritative. Distinguished.
+                </p>
+              </div>
             </FadeInSection>
           </div>
         </div>
       </section>
 
-      {/* ── CTA ──────────────────────────────────────────────────────────── */}
-      <section className="py-40 bg-zinc-950 text-white">
-        <div className="max-w-[1400px] mx-auto px-8 lg:px-16 text-center">
+      {/* ── CTA ───────────────────────────────────────────────────────────── */}
+      <section className="py-40 bg-on-surface text-surface">
+        <div className="max-w-[1440px] mx-auto px-8 lg:px-16 text-center">
           <FadeInSection>
-            <p className="text-xs tracking-[0.2em] uppercase text-zinc-500 font-medium mb-6">
-              Get started
+            <p className="text-xs tracking-[0.2em] uppercase text-outline-variant font-body font-medium mb-6">
+              Begin Today
             </p>
-            <h2 className="font-display text-4xl md:text-6xl font-light tracking-tight leading-tight mb-8">
+            <h2 className="font-headline text-4xl md:text-6xl leading-tight mb-8">
               Ready to land
               <br />
-              <span className="italic text-zinc-500">your next role?</span>
+              <span className="italic text-outline-variant">your next role?</span>
             </h2>
-            <p className="text-zinc-400 text-lg max-w-[46ch] mx-auto mb-12 leading-relaxed">
+            <p className="font-body text-outline-variant text-lg max-w-[46ch] mx-auto mb-12 leading-relaxed font-light">
               Paste your resume and start a conversation. Ruixen gives you the
               edge every job search needs — in minutes, not weeks.
             </p>
             <DirectionalButton
               onClick={onLaunchChat}
-              fillClassName="bg-zinc-100"
-              className="inline-flex items-center gap-2 px-8 py-4 bg-white text-zinc-950 text-sm font-medium rounded-full active:scale-[0.98] active:-translate-y-[1px]"
+              fillClassName="bg-surface-container-low"
+              className="inline-flex items-center gap-2 px-10 py-5 bg-surface text-on-surface text-xs font-bold rounded-full tracking-[0.2em] uppercase font-body active:scale-[0.98]"
+              style={{
+                boxShadow:
+                  "0 4px 6px -1px rgba(0,0,0,0.2), 0 2px 4px -1px rgba(0,0,0,0.1)",
+              }}
             >
-              Revise my resume
+              Revise My Resume
               <ArrowRight className="w-4 h-4" />
             </DirectionalButton>
           </FadeInSection>
         </div>
       </section>
 
-      {/* ── Footer ───────────────────────────────────────────────────────── */}
-      <footer className="bg-zinc-950 border-t border-zinc-800/60 py-12 text-zinc-500">
-        <div className="max-w-[1400px] mx-auto px-8 lg:px-16 flex flex-col md:flex-row justify-between items-center gap-6">
-          <span className="font-display text-white text-base">Ruixen AI</span>
-          <span className="text-xs text-zinc-600">
-            {new Date().getFullYear()} — AI-powered career coaching
-          </span>
-          <div className="flex items-center gap-6 text-xs">
-            <a
-              href="#"
-              className="hover:text-zinc-300 transition-colors duration-200"
-            >
-              Privacy
-            </a>
-            <a
-              href="#"
-              className="hover:text-zinc-300 transition-colors duration-200"
-            >
-              Terms
-            </a>
-            <button
-              onClick={onLaunchChat}
-              className="hover:text-zinc-300 transition-colors duration-200"
-            >
-              Launch Chat
-            </button>
+      {/* ── Footer ────────────────────────────────────────────────────────── */}
+      <footer
+        className="w-full pt-20 pb-12 border-t border-white/20"
+        style={{
+          background: "rgba(243,244,243,0.60)",
+          backdropFilter: "blur(16px)",
+          WebkitBackdropFilter: "blur(16px)",
+        }}
+      >
+        <div className="flex flex-col md:flex-row justify-between items-start px-8 md:px-16 max-w-[1920px] mx-auto gap-16 md:gap-0">
+          <div className="max-w-sm">
+            <div className="font-headline text-xl text-on-surface mb-6">
+              Ruixen<span className="italic text-primary"> AI</span>
+            </div>
+            <p className="font-body text-sm tracking-wide text-on-surface/60 mb-8 leading-relaxed font-light">
+              Redefining career presentation through the fusion of human
+              editorial insight and machine intelligence.
+            </p>
           </div>
+
+          <div className="grid grid-cols-2 gap-x-24 gap-y-10">
+            <div className="flex flex-col gap-4">
+              <span className="font-bold text-on-surface text-xs uppercase tracking-widest mb-1">
+                Platform
+              </span>
+              <a
+                href="#features"
+                className="font-body text-sm text-on-surface/60 hover:text-primary transition-colors"
+              >
+                How It Works
+              </a>
+              <a
+                href="#transformation"
+                className="font-body text-sm text-on-surface/60 hover:text-primary transition-colors"
+              >
+                Results
+              </a>
+              <button
+                onClick={onLaunchChat}
+                className="font-body text-sm text-on-surface/60 hover:text-primary transition-colors text-left"
+              >
+                Launch Chat
+              </button>
+            </div>
+            <div className="flex flex-col gap-4">
+              <span className="font-bold text-on-surface text-xs uppercase tracking-widest mb-1">
+                Legal
+              </span>
+              <a
+                href="#"
+                className="font-body text-sm text-on-surface/60 hover:text-primary transition-colors"
+              >
+                Privacy Policy
+              </a>
+              <a
+                href="#"
+                className="font-body text-sm text-on-surface/60 hover:text-primary transition-colors"
+              >
+                Terms of Service
+              </a>
+              <a
+                href="#"
+                className="font-body text-sm text-on-surface/60 hover:text-primary transition-colors"
+              >
+                Cookie Settings
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <div className="px-8 md:px-16 max-w-[1920px] mx-auto mt-16 border-t border-outline-variant/15 pt-8 flex flex-col md:flex-row justify-between gap-4">
+          <p className="font-body text-sm text-on-surface/50 font-light">
+            © {new Date().getFullYear()} Ruixen AI. All rights reserved.
+          </p>
         </div>
       </footer>
     </div>
   );
 }
 
-/* ── Sub-components ──────────────────────────────────────────────────────── */
-
-const WEAK_TEXT = "Responsible for managing social media accounts";
-const STRONG_TEXT =
-  "Grew Instagram 340% in 6 months, driving 47K new followers and a 4.2% engagement rate";
-
-type RewritePhase =
-  | "typing-weak"
-  | "pause-weak"
-  | "striking"
-  | "typing-strong"
-  | "pause-strong"
-  | "resetting";
-
-function RewriteAnimation() {
-  const [phase, setPhase] = useState<RewritePhase>("typing-weak");
-  const [weakChars, setWeakChars] = useState(0);
-  const [strongChars, setStrongChars] = useState(0);
-
-  useEffect(() => {
-    let timeout: ReturnType<typeof setTimeout>;
-    let interval: ReturnType<typeof setInterval>;
-
-    if (phase === "typing-weak") {
-      interval = setInterval(() => {
-        setWeakChars((prev) => {
-          if (prev >= WEAK_TEXT.length) {
-            clearInterval(interval);
-            timeout = setTimeout(() => setPhase("pause-weak"), 100);
-            return prev;
-          }
-          return prev + 1;
-        });
-      }, 42);
-    }
-
-    if (phase === "pause-weak") {
-      timeout = setTimeout(() => setPhase("striking"), 900);
-    }
-
-    if (phase === "striking") {
-      timeout = setTimeout(() => setPhase("typing-strong"), 650);
-    }
-
-    if (phase === "typing-strong") {
-      interval = setInterval(() => {
-        setStrongChars((prev) => {
-          if (prev >= STRONG_TEXT.length) {
-            clearInterval(interval);
-            timeout = setTimeout(() => setPhase("pause-strong"), 100);
-            return prev;
-          }
-          return prev + 1;
-        });
-      }, 26);
-    }
-
-    if (phase === "pause-strong") {
-      timeout = setTimeout(() => setPhase("resetting"), 2800);
-    }
-
-    if (phase === "resetting") {
-      timeout = setTimeout(() => {
-        setWeakChars(0);
-        setStrongChars(0);
-        setPhase("typing-weak");
-      }, 350);
-    }
-
-    return () => {
-      clearTimeout(timeout);
-      clearInterval(interval);
-    };
-  }, [phase]);
-
-  const showWeak = phase !== "resetting";
-  const isStriking =
-    phase === "striking" ||
-    phase === "typing-strong" ||
-    phase === "pause-strong";
-  const showStrong =
-    phase === "typing-strong" || phase === "pause-strong";
-  const showWeakCursor =
-    phase === "typing-weak" || phase === "pause-weak";
-  const showStrongCursor = phase === "typing-strong";
-  const showBadge = phase === "pause-strong";
-
-  return (
-    <div className="animate-float">
-      <div className="bg-white rounded-2xl border border-zinc-200/70 shadow-[0_40px_80px_-20px_rgba(0,0,0,0.1),0_0_0_1px_rgba(0,0,0,0.03)] p-6 max-w-sm">
-        <div className="flex items-center gap-2 mb-5 pb-4 border-b border-zinc-100">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse-dot" />
-          <span className="text-xs text-zinc-400 tracking-wide">
-            AI rewriting...
-          </span>
-        </div>
-
-        <p className="text-[10px] text-zinc-400 uppercase tracking-widest mb-3">
-          Resume bullet
-        </p>
-
-        <div className="min-h-[5rem]">
-          {showWeak && (
-            <p
-              className={`text-sm leading-relaxed transition-all duration-500 ${
-                isStriking ? "line-through text-zinc-300" : "text-zinc-600"
-              }`}
-            >
-              {WEAK_TEXT.slice(0, weakChars)}
-              {showWeakCursor && (
-                <span className="inline-block w-0.5 h-3.5 bg-zinc-400 ml-0.5 animate-blink align-text-bottom" />
-              )}
-            </p>
-          )}
-
-          {showStrong && (
-            <p className="text-sm leading-relaxed text-zinc-950 font-medium mt-3">
-              {STRONG_TEXT.slice(0, strongChars)}
-              {showStrongCursor && (
-                <span className="inline-block w-0.5 h-3.5 bg-zinc-950 ml-0.5 animate-blink align-text-bottom" />
-              )}
-            </p>
-          )}
-        </div>
-
-        <div
-          className={`mt-4 pt-3 border-t border-zinc-100 transition-opacity duration-500 ${
-            showBadge ? "opacity-100" : "opacity-0"
-          }`}
-        >
-          <span className="text-[11px] text-emerald-700 bg-emerald-50 border border-emerald-100 px-2.5 py-1 rounded-full font-medium">
-            +3.1x more callbacks
-          </span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function ResumeVisual() {
-  return (
-    <div className="text-xs leading-5 space-y-4">
-      <div className="flex items-center gap-2 mb-2">
-        <span className="w-2 h-2 rounded-full bg-red-400" />
-        <span className="text-zinc-400 tracking-wide">Before</span>
-      </div>
-      <div className="space-y-1.5 pb-4 border-b border-zinc-100">
-        {[
-          "Responsible for managing product roadmap",
-          "Worked with engineering on feature delivery",
-          "Helped grow the user base",
-        ].map((line) => (
-          <div key={line} className="flex items-start gap-2 text-zinc-400">
-            <span className="mt-1.5 w-1 h-1 rounded-full bg-zinc-300 flex-shrink-0" />
-            <span className="line-through decoration-zinc-300">{line}</span>
-          </div>
-        ))}
-      </div>
-
-      <div className="flex items-center gap-2">
-        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse-dot" />
-        <span className="text-zinc-400 tracking-wide">After</span>
-      </div>
-      <div className="space-y-1.5">
-        {[
-          "Defined and shipped roadmap for 4 core features, driving 31% retention lift",
-          "Led cross-functional delivery for 6 engineers, cutting cycle time by 18 days",
-          "Grew active user base from 12k to 47k in 8 months through targeted growth loops",
-        ].map((line, i) => (
-          <div
-            key={line}
-            className="flex items-start gap-2 text-zinc-700 animate-fade-in-up"
-            style={{ animationDelay: `${i * 0.1}s` }}
-          >
-            <span className="mt-1.5 w-1 h-1 rounded-full bg-emerald-500 flex-shrink-0" />
-            <span>{line}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function JobMatchVisual() {
-  const matches = [
-    { role: "Senior Product Manager", company: "Vanta", fit: "97%" },
-    { role: "Director of Product", company: "Coda", fit: "91%" },
-    { role: "Product Lead", company: "Retool", fit: "88%" },
-  ];
-
-  return (
-    <div className="flex flex-col gap-3">
-      <div className="flex items-center gap-2 mb-1">
-        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse-dot" />
-        <span className="text-xs text-zinc-400 tracking-wide">
-          3 strong matches found
-        </span>
-      </div>
-      {matches.map((m, i) => (
-        <div
-          key={m.role}
-          className="flex items-center justify-between p-3 rounded-xl bg-zinc-50 border border-zinc-100 animate-fade-in-up"
-          style={{ animationDelay: `${i * 0.1}s` }}
-        >
-          <div>
-            <p className="text-sm font-medium text-zinc-900">{m.role}</p>
-            <p className="text-xs text-zinc-400 mt-0.5">{m.company}</p>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="text-xs font-medium text-emerald-600">
-              {m.fit}
-            </span>
-            <span className="text-xs text-zinc-400">match</span>
-          </div>
-        </div>
-      ))}
-      <div className="mt-2 flex items-center gap-2 pt-3 border-t border-zinc-100">
-        <span className="text-xs text-zinc-400">
-          Based on your experience and target role
-        </span>
-      </div>
-    </div>
-  );
-}
-
-function InterviewVisual() {
-  return (
-    <div className="text-[12px] leading-5 space-y-4">
-      <div className="flex items-center gap-2 mb-4">
-        <span className="w-2 h-2 rounded-full bg-zinc-600" />
-        <span className="text-xs text-zinc-500 tracking-wide">
-          Interview practice
-        </span>
-      </div>
-
-      <div className="space-y-3">
-        <div className="text-zinc-400">
-          <span className="text-zinc-600 font-medium">Q: </span>
-          Tell me about a time you had to make a decision with incomplete data.
-        </div>
-
-        <div className="pl-3 border-l border-zinc-700 text-zinc-500 italic">
-          "I usually just go with my gut and then see what happens after..."
-        </div>
-
-        <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-3 space-y-2">
-          <div className="flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-            <span className="text-amber-400 text-[11px] font-medium">
-              Feedback
-            </span>
-          </div>
-          <p className="text-zinc-400">
-            This answer lacks structure and signals low confidence. Lead with
-            the business context, then explain what data you had, what you
-            inferred, and what the outcome was. Use the STAR format.
-          </p>
-          <p className="text-zinc-300 mt-2">
-            <span className="text-emerald-400">Stronger opening: </span>
-            "At [Company], we needed to decide on pricing before we had
-            retention data. I used comparable cohorts and..."
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-interface TestimonialCardProps {
-  quote: string;
-  name: string;
-  role: string;
-  offsetClass: string;
-}
-
-function TestimonialCard({
-  quote,
-  name,
-  role,
-  offsetClass,
-}: TestimonialCardProps) {
-  return (
-    <div
-      className={`${offsetClass} bg-white border border-zinc-100 rounded-2xl p-7 shadow-[0_10px_40px_-15px_rgba(0,0,0,0.06)]`}
-    >
-      <p className="text-zinc-500 text-sm leading-relaxed mb-7">
-        &ldquo;{quote}&rdquo;
-      </p>
-      <div className="flex items-center gap-3">
-        <div className="w-8 h-8 rounded-full bg-zinc-100 flex items-center justify-center text-xs font-medium text-zinc-500">
-          {name.charAt(0)}
-        </div>
-        <div>
-          <p className="text-sm font-medium text-zinc-950">{name}</p>
-          <p className="text-xs text-zinc-400 mt-0.5">{role}</p>
-        </div>
-      </div>
-    </div>
-  );
-}
+/* ── Exported for future use ─────────────────────────────────────────────── */
+export { DirectionalButton, FadeInSection };

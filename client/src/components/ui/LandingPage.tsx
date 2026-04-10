@@ -1,80 +1,16 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowRight, BadgeCheck, ChevronDown, Sparkles } from "lucide-react";
-import { cn } from "@/lib/utils";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { FileText, TrendingUp, Sparkles, LayoutGrid } from "lucide-react";
+
+gsap.registerPlugin(ScrollTrigger);
 
 interface LandingPageProps {
   onLaunchChat: () => void;
 }
 
-/* ── Directional Hover Fill Button ───────────────────────────────────────── */
-function DirectionalButton({
-  onClick,
-  children,
-  className = "",
-  fillClassName = "bg-primary-dim",
-  style,
-}: {
-  onClick?: () => void;
-  children: React.ReactNode;
-  className?: string;
-  fillClassName?: string;
-  style?: React.CSSProperties;
-}) {
-  const btnRef = useRef<HTMLButtonElement>(null);
-  const fillRef = useRef<HTMLSpanElement>(null);
-
-  const getTranslate = (e: React.MouseEvent) => {
-    if (!btnRef.current) return "translateX(-101%)";
-    const rect = btnRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    const w = rect.width;
-    const h = rect.height;
-    if (Math.abs(x - w / 2) > Math.abs(y - h / 2)) {
-      return x < w / 2 ? "translateX(-101%)" : "translateX(101%)";
-    }
-    return y < h / 2 ? "translateY(-101%)" : "translateY(101%)";
-  };
-
-  const handleMouseEnter = (e: React.MouseEvent) => {
-    if (!fillRef.current) return;
-    const t = getTranslate(e);
-    fillRef.current.style.transition = "none";
-    fillRef.current.style.transform = t;
-    fillRef.current.getBoundingClientRect();
-    fillRef.current.style.transition =
-      "transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)";
-    fillRef.current.style.transform = "translate(0, 0)";
-  };
-
-  const handleMouseLeave = (e: React.MouseEvent) => {
-    if (!fillRef.current) return;
-    fillRef.current.style.transition =
-      "transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)";
-    fillRef.current.style.transform = getTranslate(e);
-  };
-
-  return (
-    <button
-      ref={btnRef}
-      onClick={onClick}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-      style={style}
-      className={cn("relative overflow-hidden", className)}
-    >
-      <span
-        ref={fillRef}
-        className={cn("absolute inset-0", fillClassName)}
-        style={{ transform: "translateX(-101%)", willChange: "transform" }}
-      />
-      <span className="relative z-[1] flex items-center gap-2">{children}</span>
-    </button>
-  );
-}
-
-/* ── Scroll-triggered Fade-in ─────────────────────────────────────────────── */
-function FadeInSection({
+/* ── Reveal ───────────────────────────────────────────────────────────────── */
+function RevealUp({
   children,
   className,
   delay = 0,
@@ -84,1035 +20,455 @@ function FadeInSection({
   delay?: number;
 }) {
   const ref = useRef<HTMLDivElement>(null);
-  const [visible, setVisible] = useState(false);
-
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setVisible(true);
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.1 }
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
-
-  return (
-    <div
-      ref={ref}
-      className={className}
-      style={{
-        opacity: visible ? 1 : 0,
-        transform: visible ? "translateY(0)" : "translateY(28px)",
-        transition: `opacity 0.75s cubic-bezier(0.16, 1, 0.3, 1) ${delay}s, transform 0.75s cubic-bezier(0.16, 1, 0.3, 1) ${delay}s`,
-      }}
-    >
-      {children}
-    </div>
-  );
+    const t = gsap.to(el, {
+      opacity: 1,
+      y: 0,
+      duration: 0.9,
+      delay,
+      ease: "power3.out",
+      scrollTrigger: { trigger: el, start: "top 88%", toggleActions: "play none none none" },
+    });
+    return () => { t.scrollTrigger?.kill(); t.kill(); };
+  }, [delay]);
+  return <div ref={ref} className={`reveal-up ${className ?? ""}`}>{children}</div>;
 }
 
-/* ── Animated Counter Stat ────────────────────────────────────────────────── */
-function CounterStat({ value, label }: { value: string; label: string }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const startedRef = useRef(false);
-  const [displayed, setDisplayed] = useState(() =>
-    value.startsWith("<") ? value : "0"
-  );
-
+/* ── Animated counter ─────────────────────────────────────────────────────── */
+function Counter({ value, suffix = "" }: { value: number; suffix?: string }) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const started = useRef(false);
+  const [n, setN] = useState(0);
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (!entry.isIntersecting || startedRef.current) return;
-        startedRef.current = true;
-        observer.disconnect();
-        if (value.startsWith("<")) {
-          setDisplayed(value);
-          return;
-        }
-        const hasX = value.includes("x");
-        const hasPercent = value.includes("%");
-        const numStr = value.replace(/[^0-9.]/g, "");
-        const target = parseFloat(numStr);
-        const isDecimal = numStr.includes(".");
-        const duration = 1800;
-        const startTime = performance.now();
+    const st = ScrollTrigger.create({
+      trigger: el,
+      start: "top 85%",
+      onEnter() {
+        if (started.current) return;
+        started.current = true;
+        const dur = 1800;
+        const t0 = performance.now();
         const tick = (now: number) => {
-          const elapsed = now - startTime;
-          const progress = Math.min(elapsed / duration, 1);
-          const eased = 1 - Math.pow(1 - progress, 3);
-          const current = target * eased;
-          let str = isDecimal
-            ? current.toFixed(1)
-            : Math.round(current).toLocaleString();
-          if (hasX) str += "x";
-          if (hasPercent) str += "%";
-          setDisplayed(str);
-          if (progress < 1) requestAnimationFrame(tick);
+          const p = Math.min((now - t0) / dur, 1);
+          setN(Math.round(value * (1 - Math.pow(1 - p, 3))));
+          if (p < 1) requestAnimationFrame(tick);
         };
         requestAnimationFrame(tick);
       },
-      { threshold: 0.5 }
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
+    });
+    return () => st.kill();
   }, [value]);
-
-  return (
-    <div ref={ref} className="flex flex-col items-center py-8 px-6">
-      <span className="font-headline text-3xl text-on-surface tracking-tight italic">
-        {displayed}
-      </span>
-      <span className="text-xs text-on-surface-variant mt-1.5 tracking-[0.1em] font-body">
-        {label}
-      </span>
-    </div>
-  );
+  return <span ref={ref}>{n.toLocaleString()}{suffix}</span>;
 }
 
-/* ── Kinetic Marquee Strip ────────────────────────────────────────────────── */
-function MarqueeStrip() {
-  const items = [
-    "ATS Optimization",
-    "Resume Rewriting",
-    "Interview Prep",
-    "Cover Letters",
-    "Job Matching",
-    "Salary Negotiation",
-    "LinkedIn Optimization",
-    "Career Strategy",
-    "Offer Negotiation",
-    "Executive Positioning",
-  ];
-  const doubled = [...items, ...items];
-  return (
-    <div className="border-y border-surface-container bg-surface overflow-hidden py-4">
-      <div className="flex animate-marquee whitespace-nowrap">
-        {doubled.map((item, i) => (
-          <span key={i} className="inline-flex items-center gap-5 px-5">
-            <span className="text-[11px] font-medium tracking-[0.18em] uppercase text-outline-variant">
-              {item}
-            </span>
-            <span className="w-1 h-1 rounded-full bg-outline-variant/60 flex-shrink-0" />
-          </span>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-/* ── Resume Document Mockup ───────────────────────────────────────────────── */
-function ResumeDocumentCard() {
-  return (
-    <div className="bg-surface-container-lowest w-full h-full rounded-2xl p-10 relative overflow-hidden ring-1 ring-white/60">
-      <div
-        className="absolute inset-0 opacity-[0.025] pointer-events-none rounded-2xl"
-        style={{
-          backgroundImage: "var(--paper-grain)",
-          backgroundSize: "200px 200px",
-        }}
-      />
-      <div
-        className="absolute top-0 right-0 w-52 h-52 rounded-bl-full blur-3xl"
-        style={{ background: "rgba(119,90,25,0.06)" }}
-      />
-
-      {/* Name block */}
-      <div className="mb-8 pb-6 border-b border-primary/10">
-        <div className="w-44 h-5 bg-on-surface/90 rounded-sm mb-2.5" />
-        <div
-          className="w-28 h-3 rounded-sm mb-3 border-l-2 border-primary/40 pl-2"
-          style={{ background: "rgba(119,90,25,0.25)" }}
-        />
-        <div className="flex gap-3">
-          <div className="w-20 h-2 bg-surface-container rounded-sm" />
-          <div className="w-16 h-2 bg-surface-container rounded-sm" />
-        </div>
-      </div>
-
-      {/* Experience */}
-      <div className="mb-7">
-        <div
-          className="w-20 h-2.5 rounded-sm mb-4"
-          style={{ background: "rgba(119,90,25,0.35)" }}
-        />
-        <div className="space-y-2.5">
-          {([1, 0.9, 0.75, "accent", 1, 0.7] as (number | "accent")[]).map(
-            (w, i) => (
-              <div
-                key={i}
-                className="h-2 rounded-full"
-                style={{
-                  width: `${(w === "accent" ? 0.85 : w) * 100}%`,
-                  background:
-                    w === "accent"
-                      ? "rgba(119,90,25,0.22)"
-                      : "rgba(47,51,51,0.07)",
-                }}
-              />
-            )
-          )}
-        </div>
-      </div>
-
-      {/* Skills */}
-      <div className="mb-7">
-        <div
-          className="w-14 h-2.5 rounded-sm mb-4"
-          style={{ background: "rgba(119,90,25,0.35)" }}
-        />
-        <div className="flex gap-2 flex-wrap">
-          {[52, 68, 44, 60, 48].map((w, i) => (
-            <div
-              key={i}
-              className="h-5 rounded-full border border-primary/10"
-              style={{
-                width: `${w}px`,
-                background: "rgba(255,222,165,0.45)",
-              }}
-            />
-          ))}
-        </div>
-      </div>
-
-      {/* Education */}
-      <div>
-        <div
-          className="w-24 h-2.5 rounded-sm mb-4"
-          style={{ background: "rgba(119,90,25,0.35)" }}
-        />
-        <div className="space-y-2">
-          {[0.8, 0.6].map((w, i) => (
-            <div
-              key={i}
-              className="h-2 rounded-full"
-              style={{
-                width: `${w * 100}%`,
-                background: "rgba(47,51,51,0.07)",
-              }}
-            />
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ── AI Insight Glassmorphism Card ────────────────────────────────────────── */
-function AIInsightGlassCard() {
-  return (
-    <div className="glass-panel p-7 rounded-2xl w-72">
-      <div className="flex items-center gap-3 mb-5">
-        <div
-          className="p-2 rounded-lg"
-          style={{ background: "rgba(119,90,25,0.15)" }}
-        >
-          <Sparkles className="w-4 h-4 text-primary" />
-        </div>
-        <span className="font-headline italic text-base text-on-surface">
-          AI Insight
-        </span>
-      </div>
-      <div className="space-y-3 mb-5">
-        {[1, 0.75, 5 / 6].map((w, i) => (
-          <div
-            key={i}
-            className="h-2 rounded-full animate-pulse"
-            style={{
-              width: `${w * 100}%`,
-              background: "rgba(119,90,25,0.12)",
-              animationDelay: `${i * 0.2}s`,
-            }}
-          />
-        ))}
-      </div>
-      <div className="pt-4 border-t" style={{ borderColor: "rgba(119,90,25,0.1)" }}>
-        <p className="font-headline italic text-on-surface-variant text-sm leading-relaxed">
-          "Strengthen the opening to emphasize measurable leadership outcomes."
-        </p>
-      </div>
-    </div>
-  );
-}
-
-/* ── Workshop Mini Demos ──────────────────────────────────────────────────── */
-
-function RewriteMiniDemo() {
-  const [phase, setPhase] = useState<"before" | "after">("before");
+/* ── Circle gauge ─────────────────────────────────────────────────────────── */
+function CircleGauge() {
+  const circleRef = useRef<SVGCircleElement>(null);
+  const started = useRef(false);
+  const circumference = 628;
 
   useEffect(() => {
-    const alive = { current: true };
-    let timer = 0;
-
-    const cycle = (current: "before" | "after") => {
-      if (!alive.current) return;
-      setPhase(current);
-      timer = window.setTimeout(
-        () => cycle(current === "before" ? "after" : "before"),
-        current === "before" ? 1800 : 2600
-      );
-    };
-
-    timer = window.setTimeout(() => cycle("before"), 400);
-    return () => {
-      alive.current = false;
-      clearTimeout(timer);
-    };
+    const el = circleRef.current;
+    if (!el) return;
+    const st = ScrollTrigger.create({
+      trigger: el,
+      start: "top 85%",
+      onEnter() {
+        if (started.current) return;
+        started.current = true;
+        gsap.to(el, {
+          strokeDashoffset: circumference - circumference * 0.98,
+          duration: 2,
+          ease: "power2.out",
+        });
+      },
+    });
+    return () => st.kill();
   }, []);
 
   return (
-    <div className="w-60 rounded-xl overflow-hidden border border-outline-variant/20 bg-surface-container-lowest text-[10px] shrink-0">
-      <div className="px-4 py-2.5 border-b border-outline-variant/15 flex items-center gap-2">
-        <span className="w-1.5 h-1.5 rounded-full bg-primary/50 animate-pulse-dot" />
-        <span className="text-on-surface-variant tracking-wide font-medium uppercase">
-          AI rewriting
-        </span>
-      </div>
-      <div className="px-4 py-3 min-h-[3.5rem] flex flex-col justify-center gap-2">
-        <p
-          className="leading-snug transition-all duration-400"
-          style={{
-            color:
-              phase === "after" ? "rgba(47,51,51,0.25)" : "rgba(47,51,51,0.5)",
-            textDecoration: phase === "after" ? "line-through" : "none",
-          }}
-        >
-          Helped manage social media accounts
-        </p>
-        <p
-          className="text-on-surface font-medium leading-snug transition-all duration-500"
-          style={{
-            opacity: phase === "after" ? 1 : 0,
-            transform: `translateY(${phase === "after" ? 0 : 4}px)`,
-          }}
-        >
-          Grew Instagram 340% in 6 months, 47K followers
-        </p>
-      </div>
-    </div>
-  );
-}
-
-function ATSScoreDemo() {
-  const [score, setScore] = useState(0);
-
-  useEffect(() => {
-    let frameId = 0;
-    let loopId = 0;
-    let startTime = 0;
-    const duration = 1400;
-    const target = 94;
-
-    const animate = (timestamp: number) => {
-      if (!startTime) startTime = timestamp;
-      const progress = Math.min((timestamp - startTime) / duration, 1);
-      const eased = 1 - Math.pow(1 - progress, 3);
-      setScore(Math.round(target * eased));
-      if (progress < 1) frameId = requestAnimationFrame(animate);
-    };
-
-    const cycle = () => {
-      cancelAnimationFrame(frameId);
-      startTime = 0;
-      setScore(0);
-      frameId = requestAnimationFrame(animate);
-    };
-
-    cycle();
-    loopId = window.setInterval(cycle, 4200);
-
-    return () => {
-      cancelAnimationFrame(frameId);
-      clearInterval(loopId);
-    };
-  }, []);
-
-  return (
-    <div className="w-60 rounded-xl border border-outline-variant/20 bg-surface-container-lowest px-4 py-4 text-[10px] shrink-0">
-      <div className="flex justify-between items-center mb-3">
-        <span className="text-on-surface-variant tracking-wide font-medium uppercase">
-          ATS Match Score
-        </span>
-        <span className="font-mono text-primary font-bold text-xs tabular-nums">
-          {score}%
-        </span>
-      </div>
-      <div className="h-1.5 bg-surface-container rounded-full overflow-hidden mb-2.5">
-        <div
-          className="h-full rounded-full"
-          style={{
-            width: `${score}%`,
-            background: "#775a19",
-            transition: "width 0.05s linear",
-          }}
+    <div className="w-full aspect-square bg-white rounded-full soft-shadow flex items-center justify-center relative overflow-hidden group">
+      <div className="absolute inset-0 bg-secondary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-700 rounded-full" />
+      <svg className="absolute inset-0 w-full h-full -rotate-90 p-4" viewBox="0 0 210 210">
+        <circle cx="105" cy="105" r="100" fill="none" stroke="#e8e8e8" strokeWidth="2" />
+        <circle
+          ref={circleRef}
+          cx="105" cy="105" r="100"
+          fill="none"
+          stroke="#ba002c"
+          strokeWidth="2"
+          strokeDasharray={circumference}
+          strokeDashoffset={circumference}
         />
-      </div>
-      <div className="flex justify-between">
-        <span className="text-on-surface/30">Keyword relevance</span>
-        <span
-          className="font-medium transition-colors duration-300"
-          style={{ color: score > 85 ? "#775a19" : "rgba(47,51,51,0.4)" }}
-        >
-          {score > 85 ? "Strong" : score > 55 ? "Building..." : "Scanning..."}
-        </span>
-      </div>
-    </div>
-  );
-}
-
-function MatchListDemo() {
-  const jobs = [
-    { title: "Senior PM", company: "Vanta", fit: "97%" },
-    { title: "Dir. of Product", company: "Coda", fit: "91%" },
-    { title: "Product Lead", company: "Retool", fit: "88%" },
-  ] as const;
-
-  const [shown, setShown] = useState(0);
-
-  useEffect(() => {
-    const alive = { current: true };
-    let timer = 0;
-
-    const advance = (n: number) => {
-      if (!alive.current) return;
-      if (n <= jobs.length) {
-        setShown(n);
-        timer = window.setTimeout(() => advance(n + 1), 480);
-      } else {
-        timer = window.setTimeout(() => {
-          if (!alive.current) return;
-          setShown(0);
-          timer = window.setTimeout(() => advance(1), 500);
-        }, 2400);
-      }
-    };
-
-    timer = window.setTimeout(() => advance(1), 700);
-    return () => {
-      alive.current = false;
-      clearTimeout(timer);
-    };
-  }, []);
-
-  return (
-    <div className="w-60 rounded-xl border border-outline-variant/20 bg-surface-container-lowest text-[10px] overflow-hidden shrink-0">
-      <div className="px-4 py-2.5 border-b border-outline-variant/15 flex items-center gap-2">
-        <span className="w-1.5 h-1.5 rounded-full bg-primary/50 animate-pulse-dot" />
-        <span className="text-on-surface-variant tracking-wide font-medium uppercase">
-          Top matches
-        </span>
-      </div>
-      <div className="px-4 py-2 space-y-0.5">
-        {jobs.map((job, i) => (
-          <div
-            key={job.title}
-            className="flex items-center justify-between py-2 border-b border-outline-variant/10 last:border-0"
-            style={{
-              opacity: shown > i ? 1 : 0,
-              transform: `translateY(${shown > i ? 0 : 5}px)`,
-              transition: "opacity 0.35s ease, transform 0.35s ease",
-            }}
-          >
-            <div>
-              <p className="text-on-surface font-semibold">{job.title}</p>
-              <p className="text-on-surface/40 mt-0.5">{job.company}</p>
+      </svg>
+      <div className="text-center z-10 px-4">
+        <div className="font-label text-[10px] text-secondary tracking-widest mb-3 uppercase">ATS Resonance</div>
+        <div className="font-headline italic text-on-surface" style={{ fontSize: "clamp(3.5rem, 8vw, 7rem)", lineHeight: 1 }}>
+          98<span className="text-secondary" style={{ fontSize: "0.4em" }}>%</span>
+        </div>
+        <div className="mt-5 flex justify-center items-end gap-1.5">
+          {[
+            { h: "h-8", fill: "h-3/4" },
+            { h: "h-12", fill: "h-full" },
+            { h: "h-10", fill: "h-5/6" },
+          ].map((bar, i) => (
+            <div key={i} className={`w-1 ${bar.h} bg-secondary/10 rounded-full overflow-hidden relative`}>
+              <div className={`absolute bottom-0 left-0 w-full ${bar.fill} bg-secondary`} />
             </div>
-            <span className="font-mono font-bold text-primary">{job.fit}</span>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </div>
   );
 }
 
-/* ── Workshop Row ─────────────────────────────────────────────────────────── */
-function WorkshopRow({
-  num,
-  title,
-  desc,
-  demo,
-  delay = 0,
-}: {
-  num: string;
-  title: string;
-  desc: string;
-  demo: React.ReactNode;
-  delay?: number;
-}) {
-  return (
-    <FadeInSection delay={delay}>
-      <div className="group grid grid-cols-1 md:grid-cols-[64px_1fr_1.35fr_auto] gap-x-10 gap-y-3 py-10 lg:py-14 border-t border-outline-variant/20 items-start -mx-6 px-6 md:-mx-16 md:px-16 hover:bg-primary/[0.025] transition-colors duration-300 rounded-sm">
-        <span className="font-mono text-5xl font-light leading-none select-none transition-colors duration-300" style={{ color: "rgba(119,90,25,0.15)" }}>
-          {num}
-        </span>
-        <h3 className="font-headline text-2xl md:text-3xl italic text-on-surface group-hover:text-primary transition-colors duration-300 leading-tight pt-1">
-          {title}
-        </h3>
-        <p className="font-body text-on-surface-variant leading-relaxed text-[0.9rem] font-light max-w-[52ch]">
-          {desc}
-        </p>
-        <div className="hidden md:block">{demo}</div>
-      </div>
-    </FadeInSection>
-  );
-}
-
-/* ── Main Landing Page ────────────────────────────────────────────────────── */
+/* ── Main ─────────────────────────────────────────────────────────────────── */
 export default function LandingPage({ onLaunchChat }: LandingPageProps) {
-  const [mounted, setMounted] = useState(false);
-  const resumeCardRef = useRef<HTMLDivElement>(null);
-  const aiCardRef = useRef<HTMLDivElement>(null);
-  const bgTextRef = useRef<HTMLDivElement>(null);
+  const heroRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      const cx = window.innerWidth / 2;
-      const cy = window.innerHeight / 2;
-      const mx = (e.clientX - cx) / cx;
-      const my = (e.clientY - cy) / cy;
-
-      if (resumeCardRef.current) {
-        resumeCardRef.current.style.transform = `rotateY(${-12 + mx * 4}deg) rotateX(${5 + my * 3}deg) translate(${mx * 8}px, ${my * 6}px)`;
-      }
-      if (aiCardRef.current) {
-        aiCardRef.current.style.transform = `translate(${mx * 18}px, ${my * 14}px)`;
-      }
-      if (bgTextRef.current) {
-        bgTextRef.current.style.transform = `translateX(${mx * -22}px)`;
-      }
-    };
-
-    window.addEventListener("mousemove", handleMouseMove);
-    return () => window.removeEventListener("mousemove", handleMouseMove);
+    const ctx = gsap.context(() => {
+      gsap.from(".hero-line", {
+        opacity: 0,
+        y: 40,
+        duration: 1.1,
+        stagger: 0.14,
+        ease: "power3.out",
+        delay: 0.15,
+      });
+      gsap.from(".hero-body", {
+        opacity: 0,
+        y: 20,
+        duration: 1,
+        delay: 0.6,
+        ease: "power3.out",
+      });
+    }, heroRef);
+    return () => ctx.revert();
   }, []);
 
   return (
-    <div className="min-h-screen bg-surface text-on-surface font-body overflow-x-hidden">
-      {/* Paper grain — fixed, pointer-events-none */}
-      <div
-        className="fixed inset-0 z-[100] pointer-events-none opacity-[0.025]"
-        style={{
-          backgroundImage: "var(--paper-grain)",
-          backgroundRepeat: "repeat",
-          backgroundSize: "200px 200px",
-        }}
-      />
+    <div className="bg-surface text-on-surface font-body overflow-x-hidden">
 
-      {/* ── Nav ───────────────────────────────────────────────────────────── */}
-      <nav
-        className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 md:px-12 py-6 border-b border-white/20"
-        style={{
-          background: "rgba(250,249,248,0.65)",
-          backdropFilter: "blur(20px)",
-          WebkitBackdropFilter: "blur(20px)",
-        }}
-      >
-        <span className="font-headline text-xl font-bold tracking-tighter text-on-surface">
-          Ruixen<span className="italic text-primary"> AI</span>
-        </span>
-
-        <div className="hidden md:flex items-center gap-10">
-          <a
-            href="#features"
-            className="font-headline italic text-lg text-primary border-b border-primary pb-0.5 hover:opacity-75 transition-opacity"
-          >
-            How It Works
-          </a>
-          <a
-            href="#transformation"
-            className="font-headline italic text-lg text-on-surface/70 hover:text-primary transition-colors"
-          >
-            Results
-          </a>
-          <a
-            href="#testimonial"
-            className="font-headline italic text-lg text-on-surface/70 hover:text-primary transition-colors"
-          >
-            Stories
-          </a>
+      {/* ── NAVBAR ───────────────────────────────────────────────────────────── */}
+      <nav className="fixed top-0 left-0 w-full z-50 bg-white/80 backdrop-blur-xl border-b border-zinc-100 px-8 md:px-12 py-5 flex items-center justify-between">
+        <span className="font-headline text-2xl text-primary italic tracking-tight">Ruixen AI</span>
+        <div className="hidden md:flex items-center gap-8">
+          {[
+            { label: "The Method", href: "#method" },
+            { label: "ATS Analysis", href: "#results" },
+            { label: "Consultation", href: "#start" },
+          ].map(({ label, href }) => (
+            <a key={label} href={href} className="font-label text-[11px] uppercase tracking-widest text-on-surface-variant hover:text-primary transition-colors duration-150">
+              {label}
+            </a>
+          ))}
         </div>
-
-        <DirectionalButton
+        <button
           onClick={onLaunchChat}
-          fillClassName="bg-primary-dim"
-          className="flex items-center gap-2 px-7 py-2.5 bg-primary text-on-primary text-xs font-bold rounded-full uppercase tracking-widest font-body active:scale-[0.98]"
-          style={{
-            boxShadow:
-              "0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.2)",
-          }}
+          className="bg-primary text-white px-6 py-2.5 rounded-full font-label text-xs uppercase tracking-widest hover:bg-secondary hover:shadow-lg hover:shadow-primary/20 transition-all duration-300 active:scale-95"
         >
-          Get Started
-        </DirectionalButton>
+          Begin Curation
+        </button>
       </nav>
 
-      {/* ── Hero ──────────────────────────────────────────────────────────── */}
-      <section
-        id="hero"
-        className="relative min-h-[100dvh] flex items-center pt-20 overflow-hidden"
-      >
-        {/* Large italic background text */}
-        <div className="absolute inset-0 pointer-events-none z-0 flex items-center justify-center overflow-hidden">
-          <div
-            ref={bgTextRef}
-            className="text-[20vw] font-headline italic select-none whitespace-nowrap"
-            style={{
-              color: "rgba(119,90,25,0.04)",
-              transition: "transform 0.12s ease-out",
-              willChange: "transform",
-            }}
+      {/* ── HERO ─────────────────────────────────────────────────────────────── */}
+      <section className="relative min-h-[100dvh] flex flex-col justify-center px-8 md:px-12 overflow-hidden bg-white pt-24">
+        <div ref={heroRef} className="z-10 max-w-6xl mx-auto w-full">
+          <h1
+            className="font-headline italic text-bleed text-primary relative mb-12"
+            style={{ fontSize: "clamp(4rem, 11vw, 11rem)" }}
           >
-            Career Excellence
+            <span className="hero-line block">YOUR RESUME IS</span>
+            <span className="hero-line block text-on-surface" style={{ marginLeft: "clamp(2rem, 8vw, 10rem)" }}>
+              HOLDING YOU
+            </span>
+            <span className="hero-line block text-secondary italic">BACK.</span>
+          </h1>
+          <div className="hero-body flex flex-col md:flex-row gap-12 items-center mt-10">
+            <p className="text-xl font-light text-on-surface-variant leading-relaxed max-w-md opacity-80">
+              Ruixen AI is a bespoke career architect that rewrites and optimizes your resume to beat Applicant Tracking Systems, match job descriptions, and secure more interviews with uncompromising precision.
+            </p>
+            <button
+              onClick={onLaunchChat}
+              className="bg-primary text-white px-10 py-5 rounded-full font-headline italic text-xl transition-all duration-300 hover:shadow-xl hover:shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] flex-shrink-0"
+            >
+              Explore the Method
+            </button>
           </div>
         </div>
+      </section>
 
-        {/* Background ambient */}
+      {/* ── THE ART OF CURATION ──────────────────────────────────────────────── */}
+      <section id="method" className="py-40 md:py-64 px-8 md:px-12 relative bg-[#fdfdfd] overflow-hidden">
+        <div className="max-w-7xl mx-auto relative">
+
+          {/* Header */}
+          <RevealUp className="mb-24 md:mb-40 text-center">
+            <h2
+              className="font-headline italic text-primary inline-block relative"
+              style={{ fontSize: "clamp(3rem, 7vw, 7rem)" }}
+            >
+              The Art of Curation
+              <span className="absolute -bottom-3 left-0 w-1/2 h-px bg-primary/15" />
+            </h2>
+          </RevealUp>
+
+          <div className="space-y-40 md:space-y-64">
+
+            {/* ── Step 01: Upload ── */}
+            <RevealUp className="relative flex flex-col md:flex-row items-center gap-12 md:gap-20">
+              {/* Ghost number */}
+              <div
+                className="absolute -left-8 md:-left-12 top-0 font-headline italic text-zinc-100 leading-none select-none -z-10 hidden lg:block"
+                style={{ fontSize: "clamp(8rem, 18vw, 18rem)" }}
+                aria-hidden
+              >
+                01
+              </div>
+              {/* Text */}
+              <div className="md:w-1/2 space-y-6 z-10">
+                <h3 className="font-headline italic uppercase tracking-tighter text-primary" style={{ fontSize: "clamp(2.5rem, 5vw, 4.5rem)" }}>
+                  Upload
+                </h3>
+                <p className="text-xl font-light text-on-surface-variant leading-relaxed max-w-md">
+                  Review, analyze, and illuminate. Our diagnostic engine performs a thorough structural audit against global professional benchmarks.
+                </p>
+              </div>
+              {/* Visual: browser mockup */}
+              <div className="md:w-1/2 relative">
+                <div className="w-full aspect-[4/3] bg-surface-container-high/40 rounded-3xl overflow-hidden soft-shadow relative float-anim">
+                  <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent" />
+                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4/5 bg-white p-6 rounded-xl shadow-2xl rotate-2 hover:rotate-0 transition-transform duration-700">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="w-2 h-2 rounded-full bg-red-400" />
+                      <div className="w-2 h-2 rounded-full bg-yellow-400" />
+                      <div className="w-2 h-2 rounded-full bg-green-400" />
+                    </div>
+                    <div className="space-y-2.5">
+                      <div className="h-2 w-3/4 bg-zinc-100 rounded-full" />
+                      <div className="h-2 w-full bg-zinc-100 rounded-full" />
+                      <div className="h-2 w-1/2 bg-primary/20 rounded-full border-l-2 border-primary pl-1" />
+                      <div className="h-2 w-5/6 bg-zinc-100 rounded-full" />
+                      <div className="h-2 w-2/3 bg-zinc-100 rounded-full" />
+                    </div>
+                    <div className="mt-5 flex justify-end">
+                      <span className="font-label text-[10px] text-primary bg-primary/5 px-2.5 py-1 rounded-full">
+                        ANALYZING STRUCTURE...
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </RevealUp>
+
+            {/* ── Step 02: Refine ── */}
+            <RevealUp className="relative flex flex-col md:flex-row-reverse items-center gap-12 md:gap-20">
+              {/* Ghost number */}
+              <div
+                className="absolute -right-8 md:-right-12 top-0 font-headline italic text-zinc-100 leading-none select-none -z-10 hidden lg:block"
+                style={{ fontSize: "clamp(8rem, 18vw, 18rem)" }}
+                aria-hidden
+              >
+                02
+              </div>
+              {/* Text */}
+              <div className="md:w-1/2 space-y-6 z-10 text-right md:pr-10">
+                <h3 className="font-headline italic uppercase tracking-tighter text-secondary" style={{ fontSize: "clamp(2.5rem, 5vw, 4.5rem)" }}>
+                  Refine
+                </h3>
+                <p className="text-xl font-light text-on-surface-variant leading-relaxed max-w-md ml-auto">
+                  Intelligent narrative alignment and curated vocabulary enhancement. A total stylistic evolution delivered with uncompromising precision.
+                </p>
+              </div>
+              {/* Visual: circle gauge */}
+              <div className="md:w-1/2 max-w-xs mx-auto md:mx-0">
+                <CircleGauge />
+              </div>
+            </RevealUp>
+
+            {/* ── Step 03: Distill ── */}
+            <RevealUp className="relative flex flex-col md:flex-row items-center gap-12 md:gap-20">
+              {/* Ghost number */}
+              <div
+                className="absolute left-1/4 -top-16 font-headline italic text-zinc-100 leading-none select-none -z-10 hidden lg:block"
+                style={{ fontSize: "clamp(8rem, 18vw, 18rem)" }}
+                aria-hidden
+              >
+                03
+              </div>
+              {/* Text */}
+              <div className="md:w-1/2 space-y-6 z-10">
+                <h3 className="font-headline italic uppercase tracking-tighter text-primary" style={{ fontSize: "clamp(2.5rem, 5vw, 4.5rem)" }}>
+                  Distill
+                </h3>
+                <p className="text-xl font-light text-on-surface-variant leading-relaxed max-w-md">
+                  Receive a bespoke professional dossier, including your{" "}
+                  <span className="underline decoration-secondary underline-offset-4 decoration-1">curated resume</span>{" "}
+                  and a strategic intelligence report optimized for elite networks.
+                </p>
+              </div>
+              {/* Visual: file cards */}
+              <div className="md:w-1/2">
+                <div className="relative grid grid-cols-2 gap-4 float-anim max-w-sm mx-auto md:mx-0">
+                  <div className="bg-white p-8 rounded-3xl soft-shadow border border-zinc-100 -rotate-3 hover:rotate-0 transition-transform duration-500">
+                    <div className="w-10 h-10 rounded-full bg-primary/5 flex items-center justify-center mb-5">
+                      <FileText size={18} className="text-primary" strokeWidth={1.5} />
+                    </div>
+                    <div className="font-label text-[9px] text-on-surface-variant/40 mb-3 uppercase tracking-widest">
+                      CURATED_RESUME.PDF
+                    </div>
+                    <div className="h-1 w-full bg-zinc-100 rounded-full" />
+                  </div>
+                  <div className="bg-primary p-8 rounded-3xl shadow-2xl translate-y-10 rotate-3 hover:rotate-0 transition-transform duration-500 text-white">
+                    <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center mb-5">
+                      <TrendingUp size={18} className="text-white" strokeWidth={1.5} />
+                    </div>
+                    <div className="font-label text-[9px] text-white/50 mb-3 uppercase tracking-widest">
+                      MARKET_REPORT.INTEL
+                    </div>
+                    <div className="h-1 w-full bg-white/20 rounded-full" />
+                  </div>
+                </div>
+              </div>
+            </RevealUp>
+
+          </div>
+        </div>
+      </section>
+
+      {/* ── MARKET ELEVATION ─────────────────────────────────────────────────── */}
+      <section id="results" className="py-40 px-8 md:px-12 bg-white relative overflow-hidden">
+        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-24 items-center">
+
+          {/* Left: headline + stats */}
+          <div className="relative">
+            <RevealUp>
+              <h2
+                className="font-headline italic text-bleed text-on-surface mb-20 uppercase"
+                style={{ fontSize: "clamp(3.5rem, 8vw, 8rem)" }}
+              >
+                MARKET <br />
+                <span className="text-primary">ELEVATION.</span>
+              </h2>
+            </RevealUp>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+              {[
+                { val: 94, suffix: "%", label: "ENGAGEMENT", color: "bg-primary/20" },
+                { val: 99, suffix: "%", label: "SYSTEM HARMONY", color: "bg-secondary/20" },
+              ].map(({ val, suffix, label, color }, i) => (
+                <RevealUp key={label} delay={i * 0.1} className="group">
+                  <div
+                    className="font-label font-bold tracking-tighter mb-2 transition-transform group-hover:scale-105 duration-500"
+                    style={{ fontSize: "clamp(3rem, 6vw, 5rem)", color: i === 0 ? "#001cbf" : "#ba002c", opacity: 0.9 }}
+                  >
+                    <Counter value={val} suffix={suffix} />
+                  </div>
+                  <div className="font-label text-[10px] uppercase tracking-[0.3em] text-outline/60 mb-3">{label}</div>
+                  <div className={`w-12 h-1 ${color} rounded-full group-hover:w-full transition-all duration-700`} />
+                </RevealUp>
+              ))}
+            </div>
+          </div>
+
+          {/* Right: advantage card */}
+          <RevealUp delay={0.1}>
+            <div className="glass-panel p-12 md:p-16 rounded-[64px] soft-shadow relative z-10 border border-zinc-100">
+              <h3 className="font-headline italic text-3xl md:text-4xl mb-12 uppercase text-primary">
+                The Curation Advantage
+              </h3>
+              <ul className="space-y-10">
+                {[
+                  {
+                    icon: <Sparkles size={22} strokeWidth={1.5} />,
+                    title: "BEYOND TEMPLATES",
+                    body: "We reject the generic. We distill a singular professional narrative that commands attention and inspires confidence.",
+                  },
+                  {
+                    icon: <LayoutGrid size={22} strokeWidth={1.5} />,
+                    title: "340+ ECOSYSTEMS",
+                    body: "Precision alignment across Workday, Taleo, Greenhouse, and every premium talent gateway.",
+                  },
+                  {
+                    icon: <TrendingUp size={22} strokeWidth={1.5} />,
+                    title: "REAL-TIME INTELLIGENCE",
+                    body: "Instant feedback loops derived from global market trends and executive leadership preferences.",
+                  },
+                ].map(({ icon, title, body }) => (
+                  <li key={title} className="flex items-start gap-7 group">
+                    <div className="w-12 h-12 rounded-full bg-primary/5 flex items-center justify-center shrink-0 text-primary group-hover:bg-primary group-hover:text-white transition-all duration-300">
+                      {icon}
+                    </div>
+                    <div>
+                      <h4 className="font-label font-bold text-[11px] uppercase tracking-widest mb-2 text-on-surface">
+                        {title}
+                      </h4>
+                      <p className="text-on-surface-variant text-sm leading-relaxed opacity-70">{body}</p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </RevealUp>
+        </div>
+      </section>
+
+      {/* ── CTA ──────────────────────────────────────────────────────────────── */}
+      <section id="start" className="min-h-[100dvh] flex items-center justify-center relative overflow-hidden px-8 md:px-12 py-32 bg-white">
+        {/* Radial gradient */}
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,28,191,0.04)_0%,transparent_60%)] pointer-events-none" />
+        {/* Organic blob */}
         <div
-          className="absolute top-0 right-0 -z-10 w-[700px] h-[700px] rounded-full blur-[150px]"
-          style={{ background: "rgba(119,90,25,0.05)" }}
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] organic-shape bg-primary/[0.02] blur-[100px] pointer-events-none"
         />
 
-        <div className="max-w-[1440px] mx-auto px-8 lg:px-16 w-full relative z-10">
-          <div className="grid grid-cols-1 lg:grid-cols-[7fr_5fr] gap-12 lg:gap-20 items-center">
-            {/* Left: Copy */}
-            <div>
-              <h1
-                className={`font-headline text-6xl md:text-[7rem] leading-[1] text-on-surface mb-8 ${
-                  mounted ? "animate-fade-in-up" : "opacity-0"
-                }`}
-              >
-                The craft of
-                <br />
-                <span className="italic text-primary">getting hired.</span>
-              </h1>
-
-              <p
-                className={`font-body text-xl text-on-surface-variant max-w-xl mb-12 leading-relaxed font-light ${
-                  mounted ? "animate-fade-in-up delay-100" : "opacity-0"
-                }`}
-              >
-                Paste your resume, describe the role you want, and get
-                expert-level rewrites, ATS optimization, and precise job
-                matches — all in one conversation.
-              </p>
-
-              <div
-                className={`flex flex-col sm:flex-row gap-4 ${
-                  mounted ? "animate-fade-in-up delay-200" : "opacity-0"
-                }`}
-              >
-                <DirectionalButton
-                  onClick={onLaunchChat}
-                  fillClassName="bg-primary-dim"
-                  className="flex items-center gap-2 px-10 py-5 bg-primary text-on-primary text-xs font-bold rounded-full uppercase tracking-[0.2em] font-body active:scale-[0.98]"
-                  style={{
-                    boxShadow:
-                      "0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.15)",
-                  }}
-                >
-                  Begin Your Story
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </DirectionalButton>
-
-                <a
-                  href="#features"
-                  className="flex items-center justify-center gap-2 px-10 py-5 text-on-surface text-xs font-bold rounded-full border border-outline-variant/30 hover:border-primary/50 hover:text-primary transition-all uppercase tracking-[0.2em] font-body"
-                >
-                  View Sample
-                  <ChevronDown className="w-3.5 h-3.5" />
-                </a>
-              </div>
-            </div>
-
-            {/* Right: 3D Resume Card */}
-            <div
-              className="hidden lg:block relative"
-              style={{ perspective: "1500px" }}
+        <div className="relative z-10 text-center max-w-4xl">
+          <RevealUp>
+            <h2
+              className="font-headline italic text-on-surface uppercase tracking-tight mb-16"
+              style={{ fontSize: "clamp(3.5rem, 10vw, 10rem)", lineHeight: 0.85 }}
             >
-              <div
-                ref={resumeCardRef}
-                className="relative w-full aspect-[4/5] rounded-2xl overflow-visible"
-                style={{
-                  transform: "rotateY(-12deg) rotateX(5deg)",
-                  transition: "transform 0.12s ease-out",
-                  willChange: "transform",
-                  boxShadow:
-                    "0 20px 40px -15px rgba(47,51,51,0.15), 0 15px 25px -10px rgba(47,51,51,0.10)",
-                }}
-              >
-                <ResumeDocumentCard />
-
-                {/* Floating AI insight card */}
-                <div
-                  ref={aiCardRef}
-                  className="absolute -top-14 -right-10 z-20 hidden md:block"
-                  style={{
-                    transition: "transform 0.12s ease-out",
-                    willChange: "transform",
-                  }}
-                >
-                  <AIInsightGlassCard />
-                </div>
-
-                {/* Ambient depth glow */}
-                <div
-                  className="absolute -bottom-12 -left-12 w-48 h-48 rounded-full -z-10 blur-[100px]"
-                  style={{ background: "rgba(119,90,25,0.22)" }}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── The Workshop (Features) ───────────────────────────────────────── */}
-      <section
-        id="features"
-        className="pt-32 md:pt-48 pb-12 md:pb-16 px-6 md:px-16 relative bg-surface"
-      >
-        <div className="max-w-[1440px] mx-auto">
-          <FadeInSection className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-4">
-            <div>
-              <span className="font-body text-primary uppercase tracking-[0.4em] text-xs font-extrabold mb-5 block">
-                The Workshop
-              </span>
-              <h2 className="font-headline text-4xl md:text-6xl text-on-surface leading-tight">
-                How Ruixen works.
-              </h2>
-            </div>
-            <p className="font-body text-on-surface-variant max-w-xs text-base leading-relaxed font-light md:text-right pb-1">
-              Three capabilities. One conversation. Every step of your search covered.
-            </p>
-          </FadeInSection>
-
-          <div>
-            <WorkshopRow
-              num="01"
-              title="Resume rewriting that lands"
-              desc="Paste your resume and Ruixen rewrites every bullet — turning vague responsibilities into measurable outcomes, fixing weak verbs, and tuning the language for the ATS filters that discard you before a human reads your name."
-              demo={<RewriteMiniDemo />}
-              delay={0}
-            />
-            <WorkshopRow
-              num="02"
-              title="ATS keywords, invisibly woven"
-              desc="Invisible to the eye but essential for the system. We embed high-impact industry keywords into your natural voice — so your resume reads like you wrote it, not like a keyword dump."
-              demo={<ATSScoreDemo />}
-              delay={0.05}
-            />
-            <WorkshopRow
-              num="03"
-              title="Job matches that actually fit"
-              desc="Describe what you want and Ruixen surfaces roles that genuinely align with your background. Every match comes with a clear explanation of why it fits and what to emphasize in your application."
-              demo={<MatchListDemo />}
-              delay={0.1}
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* ── The Transformation (Before / After) ──────────────────────────── */}
-      <section
-        id="transformation"
-        className="py-16 md:py-24 px-6 bg-surface overflow-hidden relative"
-      >
-        <div className="max-w-[1440px] mx-auto">
-          <FadeInSection className="text-center mb-24">
-            <span className="font-body text-primary uppercase tracking-[0.4em] text-xs font-extrabold mb-6 block">
-              The Transformation
-            </span>
-            <h2 className="font-headline text-4xl md:text-6xl text-on-surface italic">
-              A Visible Evolution
+              LEAVE THE <br />
+              <span className="text-primary">COMMON</span> <br />
+              BEHIND.
             </h2>
-          </FadeInSection>
-
-          <div
-            className="grid grid-cols-1 lg:grid-cols-2 gap-16 md:gap-20 items-center px-0 md:px-16"
-            style={{ perspective: "1500px" }}
-          >
-            {/* Before */}
-            <FadeInSection>
-              <div
-                className="relative space-y-8 opacity-40 grayscale hover:grayscale-0 hover:opacity-60 transition-all duration-700"
-                style={{ transform: "rotateY(12deg) rotateX(5deg)" }}
-              >
-                <span className="absolute -top-4 -left-4 bg-on-surface text-surface px-5 py-2 text-[10px] tracking-[0.3em] font-bold uppercase z-20 shadow-lg">
-                  Legacy
-                </span>
-                <div className="bg-white p-8 border border-outline-variant/30 shadow-2xl aspect-[3/4] flex flex-col justify-start relative overflow-hidden">
-                  {/* Name */}
-                  <div className="mb-5 pb-4 border-b border-on-surface/10">
-                    <p className="text-[11px] font-bold text-on-surface/40 tracking-wider uppercase mb-0.5">Jordan Mitchell</p>
-                    <p className="text-[9px] text-on-surface/30 tracking-wide">jordan@email.com · linkedin.com/in/jordan</p>
-                  </div>
-                  {/* Experience */}
-                  <div className="mb-4">
-                    <p className="text-[8px] font-bold uppercase tracking-[0.15em] text-on-surface/30 mb-2">Experience</p>
-                    <div className="mb-3">
-                      <p className="text-[9px] font-semibold text-on-surface/40">Social Media Manager — Acme Co.</p>
-                      <p className="text-[8px] text-on-surface/25 mb-1.5">2021 – Present</p>
-                      <ul className="space-y-1">
-                        {[
-                          "Responsible for managing social media accounts",
-                          "Helped with content creation and posting",
-                          "Worked on increasing followers and engagement",
-                          "Assisted with marketing campaigns",
-                        ].map((line) => (
-                          <li key={line} className="text-[8.5px] text-on-surface/30 flex gap-1.5">
-                            <span className="mt-[3px] flex-shrink-0">–</span>
-                            <span>{line}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                    <div>
-                      <p className="text-[9px] font-semibold text-on-surface/40">Marketing Assistant — Generic Corp.</p>
-                      <p className="text-[8px] text-on-surface/25 mb-1.5">2019 – 2021</p>
-                      <ul className="space-y-1">
-                        {[
-                          "Helped with various marketing tasks",
-                          "Supported team with reports and analysis",
-                        ].map((line) => (
-                          <li key={line} className="text-[8.5px] text-on-surface/30 flex gap-1.5">
-                            <span className="mt-[3px] flex-shrink-0">–</span>
-                            <span>{line}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  </div>
-                  {/* Skills */}
-                  <div>
-                    <p className="text-[8px] font-bold uppercase tracking-[0.15em] text-on-surface/30 mb-2">Skills</p>
-                    <p className="text-[8.5px] text-on-surface/30">Social Media, Content, Marketing, Excel, PowerPoint</p>
-                  </div>
-                </div>
-                <p className="font-headline italic text-center text-on-surface-variant text-lg">
-                  Functional, but forgettable.
-                </p>
-              </div>
-            </FadeInSection>
-
-            {/* After */}
-            <FadeInSection delay={0.15}>
-              <div
-                className="relative space-y-8 group"
-                style={{ transform: "rotateY(-12deg) rotateX(5deg)" }}
-              >
-                <span
-                  className="absolute -top-4 -right-4 text-on-primary px-5 py-2 text-[10px] tracking-[0.3em] font-bold uppercase z-20 shadow-xl"
-                  style={{ background: "#775a19" }}
-                >
-                  Curated
-                </span>
-                <div
-                  className="bg-surface-container-lowest p-8 aspect-[3/4] flex flex-col justify-start relative overflow-hidden rounded-sm group-hover:scale-[1.02] transition-transform duration-500"
-                  style={{
-                    boxShadow:
-                      "0 20px 40px -15px rgba(47,51,51,0.12), 0 15px 25px -10px rgba(47,51,51,0.08)",
-                    outline: "1px solid rgba(119,90,25,0.15)",
-                  }}
-                >
-                  <div
-                    className="absolute inset-0 opacity-[0.02] pointer-events-none"
-                    style={{
-                      backgroundImage: "var(--paper-grain)",
-                      backgroundSize: "200px 200px",
-                    }}
-                  />
-                  <div
-                    className="absolute top-0 right-0 w-36 h-36 rounded-bl-full blur-2xl"
-                    style={{ background: "rgba(119,90,25,0.06)" }}
-                  />
-                  {/* Name */}
-                  <div className="mb-5 pb-4 border-b border-primary/15">
-                    <p className="text-[11px] font-bold text-on-surface tracking-wider uppercase mb-0.5">Jordan Mitchell</p>
-                    <p className="text-[9px] text-primary/70 tracking-wide font-medium border-l-2 border-primary/30 pl-2">Growth & Brand Strategist</p>
-                    <p className="text-[9px] text-on-surface/40 mt-0.5 tracking-wide">jordan@email.com · linkedin.com/in/jordan</p>
-                  </div>
-                  {/* Experience */}
-                  <div className="mb-4">
-                    <p className="text-[8px] font-bold uppercase tracking-[0.15em] text-primary/60 mb-2">Experience</p>
-                    <div className="mb-3">
-                      <p className="text-[9px] font-semibold text-on-surface">Social Media Manager — Acme Co.</p>
-                      <p className="text-[8px] text-on-surface/40 mb-1.5">2021 – Present</p>
-                      <ul className="space-y-1">
-                        {[
-                          "Grew Instagram 340% in 6 months, driving 47K new followers and a 4.2% engagement rate",
-                          "Launched 3 campaigns that generated $280K in attributed pipeline",
-                          "Reduced content production time by 40% by building a reusable asset library",
-                        ].map((line) => (
-                          <li key={line} className="text-[8.5px] text-on-surface/60 flex gap-1.5">
-                            <span className="mt-[3px] text-primary flex-shrink-0">▸</span>
-                            <span>{line}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                    <div>
-                      <p className="text-[9px] font-semibold text-on-surface">Marketing Assistant — Generic Corp.</p>
-                      <p className="text-[8px] text-on-surface/40 mb-1.5">2019 – 2021</p>
-                      <ul className="space-y-1">
-                        {[
-                          "Authored 12 long-form reports adopted across 4 regional offices",
-                          "Coordinated 6-person cross-functional team, delivering all milestones on schedule",
-                        ].map((line) => (
-                          <li key={line} className="text-[8.5px] text-on-surface/60 flex gap-1.5">
-                            <span className="mt-[3px] text-primary flex-shrink-0">▸</span>
-                            <span>{line}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  </div>
-                  {/* Skills */}
-                  <div>
-                    <p className="text-[8px] font-bold uppercase tracking-[0.15em] text-primary/60 mb-2">Core Competencies</p>
-                    <div className="flex flex-wrap gap-1">
-                      {["Growth Strategy", "Content Systems", "Brand Voice", "Analytics", "A/B Testing"].map((s) => (
-                        <span key={s} className="text-[7.5px] px-2 py-0.5 rounded-full font-medium text-primary/80" style={{ background: "rgba(255,222,165,0.5)", border: "1px solid rgba(119,90,25,0.15)" }}>
-                          {s}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                  {/* Verification badge */}
-                  <div
-                    className="absolute bottom-8 right-8 w-16 h-16 rounded-full flex items-center justify-center rotate-12 glass-panel"
-                  >
-                    <BadgeCheck className="w-7 h-7 text-primary" />
-                  </div>
-                </div>
-                <p className="font-headline italic text-center text-primary text-2xl font-bold">
-                  Authoritative. Distinguished.
-                </p>
-              </div>
-            </FadeInSection>
-          </div>
-        </div>
-      </section>
-
-      {/* ── CTA ───────────────────────────────────────────────────────────── */}
-      <section className="py-40 bg-on-surface text-surface">
-        <div className="max-w-[1440px] mx-auto px-8 lg:px-16 text-center">
-          <FadeInSection>
-            <p className="text-xs tracking-[0.2em] uppercase text-outline-variant font-body font-medium mb-6">
-              Begin Today
-            </p>
-            <h2 className="font-headline text-4xl md:text-6xl leading-tight mb-8">
-              Ready to land
-              <br />
-              <span className="italic text-outline-variant">your next role?</span>
-            </h2>
-            <p className="font-body text-outline-variant text-lg max-w-[46ch] mx-auto mb-12 leading-relaxed font-light">
-              Paste your resume and start a conversation. Ruixen gives you the
-              edge every job search needs — in minutes, not weeks.
-            </p>
-            <DirectionalButton
+            <button
               onClick={onLaunchChat}
-              fillClassName="bg-surface-container-low"
-              className="inline-flex items-center gap-2 px-10 py-5 bg-surface text-on-surface text-xs font-bold rounded-full tracking-[0.2em] uppercase font-body active:scale-[0.98]"
-              style={{
-                boxShadow:
-                  "0 4px 6px -1px rgba(0,0,0,0.2), 0 2px 4px -1px rgba(0,0,0,0.1)",
-              }}
+              className="bg-primary text-white px-10 py-5 rounded-full font-headline italic text-xl transition-all duration-300 hover:shadow-xl hover:shadow-primary/20 hover:scale-[1.02] active:scale-[0.98]"
             >
-              Revise My Resume
-              <ArrowRight className="w-4 h-4" />
-            </DirectionalButton>
-          </FadeInSection>
+              Begin Your Curation
+            </button>
+          </RevealUp>
         </div>
       </section>
 
-      {/* ── Footer ────────────────────────────────────────────────────────── */}
-      <footer
-        className="w-full pt-20 pb-12 border-t border-white/20"
-        style={{
-          background: "rgba(243,244,243,0.60)",
-          backdropFilter: "blur(16px)",
-          WebkitBackdropFilter: "blur(16px)",
-        }}
-      >
-        <div className="flex flex-col md:flex-row justify-between items-start px-8 md:px-16 max-w-[1920px] mx-auto gap-16 md:gap-0">
-          <div className="max-w-sm">
-            <div className="font-headline text-xl text-on-surface mb-6">
-              Ruixen<span className="italic text-primary"> AI</span>
-            </div>
-            <p className="font-body text-sm tracking-wide text-on-surface/60 mb-8 leading-relaxed font-light">
-              Redefining career presentation through the fusion of human
-              editorial insight and machine intelligence.
+      {/* ── FOOTER ───────────────────────────────────────────────────────────── */}
+      <footer className="bg-white px-8 md:px-12 py-20 relative overflow-hidden border-t border-zinc-100">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center md:items-end gap-12">
+          <div className="flex flex-col items-center md:items-start gap-4">
+            <span className="font-headline text-3xl text-primary italic tracking-tight">Ruixen AI</span>
+            <p className="font-label text-[9px] text-zinc-400 uppercase tracking-[0.3em] text-center md:text-left">
+              © 2025 RUIXEN AI. REFINED INTELLIGENCE METHODOLOGY.
             </p>
           </div>
-
-          <div className="grid grid-cols-2 gap-x-24 gap-y-10">
-            <div className="flex flex-col gap-4">
-              <span className="font-bold text-on-surface text-xs uppercase tracking-widest mb-1">
-                Platform
-              </span>
+          <div className="flex flex-wrap justify-center gap-10">
+            {["The Method", "Privacy", "Terms", "Inquiry"].map((l) => (
               <a
-                href="#features"
-                className="font-body text-sm text-on-surface/60 hover:text-primary transition-colors"
-              >
-                How It Works
-              </a>
-              <a
-                href="#transformation"
-                className="font-body text-sm text-on-surface/60 hover:text-primary transition-colors"
-              >
-                Results
-              </a>
-              <button
-                onClick={onLaunchChat}
-                className="font-body text-sm text-on-surface/60 hover:text-primary transition-colors text-left"
-              >
-                Launch Chat
-              </button>
-            </div>
-            <div className="flex flex-col gap-4">
-              <span className="font-bold text-on-surface text-xs uppercase tracking-widest mb-1">
-                Legal
-              </span>
-              <a
+                key={l}
                 href="#"
-                className="font-body text-sm text-on-surface/60 hover:text-primary transition-colors"
+                className="font-label text-[9px] text-zinc-400 uppercase tracking-[0.2em] hover:text-primary transition-colors"
               >
-                Privacy Policy
+                {l}
               </a>
-              <a
-                href="#"
-                className="font-body text-sm text-on-surface/60 hover:text-primary transition-colors"
-              >
-                Terms of Service
-              </a>
-              <a
-                href="#"
-                className="font-body text-sm text-on-surface/60 hover:text-primary transition-colors"
-              >
-                Cookie Settings
-              </a>
-            </div>
+            ))}
           </div>
-        </div>
-
-        <div className="px-8 md:px-16 max-w-[1920px] mx-auto mt-16 border-t border-outline-variant/15 pt-8 flex flex-col md:flex-row justify-between gap-4">
-          <p className="font-body text-sm text-on-surface/50 font-light">
-            © {new Date().getFullYear()} Ruixen AI. All rights reserved.
-          </p>
         </div>
       </footer>
+
     </div>
   );
 }
-
-/* ── Exported for future use ─────────────────────────────────────────────── */
-export { DirectionalButton, FadeInSection };

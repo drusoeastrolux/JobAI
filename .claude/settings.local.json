@@ -7,7 +7,31 @@
       "Bash(python3 ~/.claude/skills/ui-ux-pro-max-skill/src/ui-ux-pro-max/scripts/search.py \"chat app dark\" --domain style -n 3)",
       "Bash(python3 ~/.claude/skills/ui-ux-pro-max-skill/src/ui-ux-pro-max/scripts/search.py \"chat app\" --domain color -n 3)",
       "Bash(python3 ~/.claude/skills/ui-ux-pro-max-skill/src/ui-ux-pro-max/scripts/search.py \"chat app\" --domain typography -n 2)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(git remote:*)",
+      "Bash(gh auth:*)",
+      "Bash(git push:*)",
+      "Bash(curl:*)",
+      "Bash(python3 -c \"import json,sys; models=[m for m in json.load\\(sys.stdin\\)['data'] if ':free' in m['id']]; [print\\(m['id'], '-', m.get\\('name',''\\)\\) for m in models[:20]]\")",
+      "Bash(pkill -f \"node.*server\")",
+      "Bash(pkill -f \"ts-node\")",
+      "Bash(pkill -f \"tsx\")",
+      "Bash(pkill -f \"vite\")",
+      "Bash(pkill -f \"concurrently\")",
+      "Bash(git add:*)",
+      "Bash(git commit -m ':*)",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(d.get\\(\\\\\"choices\\\\\",[{}]\\)[0].get\\(\\\\\"message\\\\\",{}\\).get\\(\\\\\"content\\\\\",d.get\\(\\\\\"error\\\\\",\\\\\"\\\\\"\\)\\)\\)\")",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(d.get\\(\\\\\"choices\\\\\",[{}]\\)[0].get\\(\\\\\"message\\\\\",{}\\).get\\(\\\\\"content\\\\\",str\\(d.get\\(\\\\\"error\\\\\",\\\\\"\\\\\"\\)\\)\\)\\)\")",
+      "Bash(open:*)",
+      "Bash(python3:*)",
+      "Bash(pkill -f \"node dist/server\")",
+      "Bash(kill 58000:*)",
+      "Bash(xargs kill:*)",
+      "Bash(npm --prefix /Users/drusoescalante/Desktop/AIBot/ChatAgent run dev)",
+      "Bash(pkill -f \"tsx watch\")",
+      "Bash(pkill -f \"ts-node src/server.ts\")",
+      "Read(//tmp/**)",
+      "Bash(pip3 install:*)"
     ]
   }
 }

@@ -9,54 +9,176 @@ html { scroll-behavior: smooth; }
 body {
   margin: 0;
   padding: 0;
-  font-family: 'Inter', sans-serif;
-  background-color: #f9f9f9;
-  color: #1a1c1c;
+  font-family: 'Outfit', sans-serif;
+  background-color: #F5F2EC;
+  color: #1A1714;
   overflow-x: hidden;
 }
 
-/* ── Typography ───────────────────────────────────────────────────────────── */
-.text-bleed {
-  letter-spacing: -0.05em;
-  line-height: 0.82;
+/* ── Material Symbols ─────────────────────────────────────────────────────── */
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+  vertical-align: middle;
 }
 
-/* ── Shadows ──────────────────────────────────────────────────────────────── */
+/* ── Editorial type scale ─────────────────────────────────────────────────── */
+.headline-massive {
+  font-size: clamp(2.6rem, 6.5vw, 7.5rem);
+  line-height: 0.9;
+  letter-spacing: -0.04em;
+}
+
+/* ── Line 1: clip-up reveal ───────────────────────────────────────────────── */
+.hero-line {
+  overflow: hidden;
+  display: block;
+}
+.hero-line-inner {
+  display: block;
+  transform: translateY(110%);
+}
+
+/* ── Line 2: slide-in from left ───────────────────────────────────────────── */
+.hero-line-slide {
+  overflow: hidden;
+  display: block;
+}
+.hero-line-slide-inner {
+  display: block;
+  transform: translateX(-80px);
+  opacity: 0;
+}
+
+/* ── Line 3: per-character stagger ───────────────────────────────────────── */
+.hero-letter {
+  display: inline-block;
+  opacity: 0;
+  transform: translateY(28px) rotate(-4deg);
+  transform-origin: bottom left;
+}
+
+/* ── Scroll indicator bounce ──────────────────────────────────────────────── */
+@keyframes scroll-bounce {
+  0%, 100% { transform: translateY(0);    opacity: 0.5; }
+  50%       { transform: translateY(10px); opacity: 1;   }
+}
+.scroll-indicator { animation: scroll-bounce 1.8s ease-in-out infinite; }
+
+/* ── Magazine meta label ──────────────────────────────────────────────────── */
+.magazine-number {
+  font-family: 'Newsreader', serif;
+  font-style: italic;
+  font-size: 0.75rem;
+  letter-spacing: 0.2em;
+}
+
+/* ── Gradient editorial rule ──────────────────────────────────────────────── */
+.editorial-line {
+  height: 1px;
+  background: linear-gradient(to right, rgba(27,27,27,1), rgba(27,27,27,0));
+  width: 100%;
+}
+
+/* ── Ghost stroke text ────────────────────────────────────────────────────── */
+.text-outline {
+  -webkit-text-stroke: 1px rgba(27, 27, 27, 0.2);
+  color: transparent;
+}
+
+/* ── Vertical writing ─────────────────────────────────────────────────────── */
+.vertical-text {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+}
+
+/* ── Floating watermark label ─────────────────────────────────────────────── */
+.floating-label {
+  position: absolute;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: #1b1b1b;
+  opacity: 0.4;
+}
+
+/* ── Luxury card shadow ───────────────────────────────────────────────────── */
+.shadow-luxury {
+  box-shadow:
+    0 40px 100px -20px rgba(0, 0, 0, 0.1),
+    0 20px 40px -15px rgba(0, 0, 0, 0.05);
+}
+
+/* ── Ambient diagonal streak ─────────────────────────────────────────────── */
+.dynamic-streak {
+  position: absolute;
+  top: -10%;
+  left: -20%;
+  width: 150%;
+  height: 120%;
+  background: linear-gradient(
+    135deg,
+    transparent 0%,
+    rgba(255, 107, 157, 0.15) 20%,
+    rgba(255, 178, 107, 0.25) 40%,
+    rgba(202, 127, 243, 0.2)  60%,
+    rgba(55,  0,   83,  0.05) 80%,
+    transparent 100%
+  );
+  filter: blur(120px);
+  z-index: 0;
+  pointer-events: none;
+  transform: rotate(-5deg);
+}
+
+/* ── Mesh radial background ──────────────────────────────────────────────── */
+.mesh-gradient-bg {
+  background-color: #ffffff;
+  background-image:
+    radial-gradient(at 100% 0%,   rgba(255, 107, 157, 0.4) 0px, transparent 50%),
+    radial-gradient(at 0%   100%, rgba(202, 127, 243, 0.4) 0px, transparent 50%),
+    radial-gradient(at 80%  80%,  rgba(255, 178, 107, 0.3) 0px, transparent 50%),
+    radial-gradient(at 20%  20%,  rgba(55,  0,   83,  0.1) 0px, transparent 50%),
+    radial-gradient(at 50%  50%,  rgba(255, 126, 179, 0.2) 0px, transparent 50%);
+  background-attachment: fixed;
+}
+
+/* ── Soft shadow (legacy) ─────────────────────────────────────────────────── */
 .soft-shadow {
   box-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.08);
 }
 
-/* ── Glass ────────────────────────────────────────────────────────────────── */
+/* ── Glass panel (legacy) ─────────────────────────────────────────────────── */
 .glass-panel {
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
   background: rgba(255, 255, 255, 0.7);
 }
 
-/* ── Organic blob ─────────────────────────────────────────────────────────── */
-.organic-shape {
-  border-radius: 60% 40% 70% 30% / 40% 50% 60% 50%;
-}
-
-/* ── Float ────────────────────────────────────────────────────────────────── */
+/* ── Float animation ──────────────────────────────────────────────────────── */
 @keyframes float {
   0%, 100% { transform: translateY(0); }
   50%       { transform: translateY(-15px); }
 }
 .float-anim { animation: float 6s ease-in-out infinite; }
 
-/* ── Reveal (GSAP-driven) ─────────────────────────────────────────────────── */
+/* ── GSAP reveal (initial hidden state) ───────────────────────────────────── */
 .reveal-up { opacity: 0; transform: translateY(30px); }
 
-/* ── Marquee ──────────────────────────────────────────────────────────────── */
-@keyframes marquee {
-  0%   { transform: translateX(0); }
-  100% { transform: translateX(-50%); }
+/* ── Chat ambient orbs ────────────────────────────────────────────────────── */
+@keyframes orb1 {
+  0%, 100% { transform: translateX(-50%) scale(1); }
+  50%       { transform: translateX(-50%) scale(1.1) translateY(-10px); }
 }
-.animate-marquee {
-  animation: marquee 45s linear infinite;
-  will-change: transform;
+@keyframes orb2 {
+  0%, 100% { transform: scale(1); }
+  50%       { transform: scale(1.08) translateY(8px); }
 }
+.animate-orb-1 { animation: orb1 8s ease-in-out infinite; }
+.animate-orb-2 { animation: orb2 10s ease-in-out infinite; }
 
 /* ── Text selection ───────────────────────────────────────────────────────── */
-::selection { background: rgba(0, 28, 191, 0.15); color: #001cbf; }
+::selection {
+  background: #f5d9ff;
+  color: #6b2093;
+}

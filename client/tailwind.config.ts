@@ -5,37 +5,45 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        headline: ["Newsreader", "Georgia", "serif"],
-        body: ["Inter", "sans-serif"],
-        sans: ["Inter", "sans-serif"],
-        label: ["Space Grotesk", "sans-serif"],
-        mono: ["Space Grotesk", "monospace"],
+        headline: ["Playfair Display", "serif"],
+        serif:    ["Playfair Display", "serif"],
+        sans:     ["Outfit", "sans-serif"],
+        body:     ["Outfit", "sans-serif"],
+        label:    ["Outfit", "sans-serif"],
+        mono:     ["ui-monospace", "SFMono-Regular", "monospace"],
       },
       colors: {
-        primary: "#001cbf",
-        secondary: "#ba002c",
-        "on-surface": "#1a1c1c",
-        "on-surface-variant": "#444557",
-        surface: "#f9f9f9",
-        "surface-container": "#eeeeee",
-        "surface-container-low": "#f3f3f4",
-        "surface-container-high": "#e8e8e8",
-        "surface-container-highest": "#e2e2e2",
-        "surface-container-lowest": "#ffffff",
-        outline: "#757689",
-        "outline-variant": "#c5c5da",
-        "on-primary": "#ffffff",
-        "primary-container": "#dfe0ff",
-      },
-      borderRadius: {
-        DEFAULT: "24px",
-        sm: "16px",
-        md: "24px",
-        lg: "32px",
-        xl: "48px",
-        "2xl": "64px",
-        "3xl": "80px",
-        full: "9999px",
+        // ── Brand palette ─────────────────────────────────────────────────────
+        cream:   "#F5F2EC",
+        ink:     "#1A1714",
+        sienna:  "#BF4E30",
+        "sienna-dark": "#A33E22",
+        muted:   "#6B6560",
+        border:  "#E8E4DF",
+        "border-strong": "#C8C4BF",
+
+        // ── Surface tokens (used by chat component) ───────────────────────────
+        surface:                   "#F5F2EC",
+        "surface-container":       "#EDEAE4",
+        "surface-container-low":   "#F0EDE7",
+        "surface-container-high":  "#E6E2DC",
+        "surface-container-highest":"#DDD9D3",
+        "surface-container-lowest":"#FFFFFF",
+
+        // ── Semantic tokens ───────────────────────────────────────────────────
+        "on-surface":         "#1A1714",
+        "on-surface-variant": "#6B6560",
+        "outline":            "#9E9892",
+        "outline-variant":    "#D4CFCA",
+
+        // ── Accent (maps from old "primary" usages still in chat component) ───
+        primary:           "#BF4E30",
+        "primary-container":"#F0E8E3",
+        "on-primary":      "#FFFFFF",
+
+        // ── Secondary (used by chat component) ────────────────────────────────
+        secondary:    "#8B6914",
+        "on-secondary":"#FFFFFF",
       },
     },
   },
